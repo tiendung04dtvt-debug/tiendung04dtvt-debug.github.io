@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DŨNG — Song ngư cá koi</title>
+  <desc id="desc">Hai cá koi màu san hô và xanh ngọc bơi vòng quanh nhau trong một nét vẽ uyển chuyển.</desc>
+  <defs>
+    <linearGradient id="coral" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#E89A64"/><stop offset=".55" stop-color="#D96E55"/><stop offset="1" stop-color="#B84F4A"/></linearGradient>
+    <linearGradient id="teal" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#173C50"/><stop offset=".55" stop-color="#256B72"/><stop offset="1" stop-color="#6A9A8B"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#E8C987"/><stop offset="1" stop-color="#B9874E"/></linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="222" fill="none" stroke="#D9C7A4" stroke-width="5" stroke-dasharray="486 38 330 542" stroke-linecap="round" transform="rotate(-30 256 256)"/>
+  <circle cx="256" cy="256" r="205" fill="none" stroke="#E8E0D3" stroke-width="2" stroke-dasharray="1 11"/>
+  <g>
+    <path d="M368 151c-33-35-78-48-124-35-40 11-67 35-108 55l-31-22 14 42-20 39 42-15c39-12 68-8 103 6 55 22 105-12 124-70z" fill="url(#coral)"/>
+    <path d="M254 120c17-22 41-31 67-25-17 12-29 28-36 47" fill="#F3BD7F" opacity=".9"/>
+    <path d="M284 207c-8 22-7 41 8 57 23-14 37-33 39-56" fill="#C85A50"/>
+    <path d="M164 172l-36-23 17 42-21 39 44-18" fill="#B94F49"/>
+    <path d="M183 170c37-20 69-36 103-37m-87 59c35-9 65-9 94 2m-61 23c28-2 50 2 72 12" fill="none" stroke="#FFE1B7" stroke-width="4" stroke-linecap="round" opacity=".83"/>
+    <circle cx="344" cy="155" r="7" fill="#F8E5C3"/><circle cx="346" cy="155" r="3.2" fill="#3A3740"/>
+    <path d="M357 173l13 3-12 5" fill="none" stroke="#7E3F42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g transform="rotate(180 256 256)">
+    <path d="M368 151c-33-35-78-48-124-35-40 11-67 35-108 55l-31-22 14 42-20 39 42-15c39-12 68-8 103 6 55 22 105-12 124-70z" fill="url(#teal)"/>
+    <path d="M254 120c17-22 41-31 67-25-17 12-29 28-36 47" fill="#94B5A3" opacity=".9"/>
+    <path d="M284 207c-8 22-7 41 8 57 23-14 37-33 39-56" fill="#1D5661"/>
+    <path d="M164 172l-36-23 17 42-21 39 44-18" fill="#1C4C5C"/>
+    <path d="M183 170c37-20 69-36 103-37m-87 59c35-9 65-9 94 2m-61 23c28-2 50 2 72 12" fill="none" stroke="#D6E6D3" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+    <circle cx="344" cy="155" r="7" fill="#F5E2BD"/><circle cx="346" cy="155" r="3.2" fill="#27343A"/>
+    <path d="M357 173l13 3-12 5" fill="none" stroke="#A9C6A8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <path d="M221 251c13-11 26-15 39-11 12 4 22 13 31 26-16-5-28-5-39 1-10 6-14 16-13 29-14-12-21-27-18-45z" fill="url(#gold)"/>
+  <circle cx="250" cy="252" r="4" fill="#F8F2E8"/>
+  <path d="M92 314c22 17 47 25 74 23m179 23c28 2 52-7 73-26" fill="none" stroke="#D7B776" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+  <circle cx="171" cy="339" r="5" fill="#D7B776"/><circle cx="342" cy="365" r="4" fill="#D7B776"/>
+</svg>
