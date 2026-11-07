@@ -26,7 +26,7 @@
   <div class="brand"><img class="brand-mark" src="assets/dung-song-ngu-32.svg" alt="Logo DŨNG: cá koi song ngư"><div><p class="brand-owner">DŨNG</p><h1>Ôn thi CNTT cơ bản</h1><p>10 đề trắc nghiệm, bài lý thuyết PDF và 6 module ôn tập</p></div></div>
   <div class="top-actions"><span class="storage-status" id="storageStatus">Đang kết nối…</span><button class="btn secondary small" id="syncCodeButton" disabled onclick="copySyncCode()">Mã: …</button><button class="btn secondary small" id="restoreSyncCodeButton" disabled onclick="restoreSyncCode()">Nhập mã thiết bị khác</button></div>
 </header>
-<aside class="sync-hint"><strong>Mã cá nhân:</strong> mã này nhận diện nơi lưu tiến độ và câu sai của bạn. Bấm vào mã để sao chép; trên thiết bị khác, chọn <strong>Nhập mã thiết bị khác</strong>. Dùng cùng một mã trên các thiết bị của bạn để tiếp tục học.</aside>
+<aside class="sync-hint"><strong>Mã cá nhân:</strong> mã này nhận diện nơi lưu tiến độ và câu sai của bạn. Bấm vào mã để sao chép; trên thiết bị khác, chọn <strong>Nhập mã thiết bị khác</strong>. Dùng cùng một mã trên các thiết bị của bạn để tiếp tục học. Trang cũng ghi nhận thời điểm hoạt động gần nhất của mã này.</aside>
 <main id="main"></main>
 <div class="source-note">Các câu hỏi và lựa chọn được trích từ PDF bạn cung cấp. Tiến độ tự lưu và đồng bộ bằng mã 6 số.</div>
 </div>
@@ -46,6 +46,7 @@ let cloudReady=false;
 let cloudSyncTimer=null;
 let cloudSyncRunning=false;
 let cloudSyncQueued=false;
+let lastSeenTimer=null;
 let view='home';
 let homeTab='exams';
 let studyExamId=null;
@@ -80,6 +81,8 @@ async function cloudRpc(name,args={}){
   const text=await response.text();if(!response.ok)throw new Error(`Supabase ${response.status}: ${text.slice(0,180)}`);return text?JSON.parse(text):null;
 }
 function normalizeCloudDb(saved){return {...emptyDb(),...saved,mistakes:saved?.mistakes||{},attempts:saved?.attempts||{},best:saved?.best||{}};}
+async function updateLastSeen(){if(!cloudReady||!syncCode||document.visibilityState==='hidden')return;try{await cloudRpc('touch_study_seen',{p_code:syncCode});}catch(e){}}
+function startLastSeenTracking(){if(lastSeenTimer)return;updateLastSeen();lastSeenTimer=setInterval(updateLastSeen,5*60*1000);}
 function queueCloudSync(){if(!cloudReady||!syncCode)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(flushCloudSync,700);}
 async function flushCloudSync(){
   if(!cloudReady||!syncCode)return;if(cloudSyncRunning){cloudSyncQueued=true;return;}cloudSyncRunning=true;
@@ -91,12 +94,12 @@ async function flushCloudSync(){
 async function initializeCloudSync(){
   setSyncStatus('Đang kết nối…');
   try{
-    if(!syncCode){syncCode=await cloudRpc('create_study_code');if(!/^\d{6}$/.test(syncCode))throw new Error('Mã trả về không hợp lệ.');localStorage.setItem(SYNC_CODE_KEY,syncCode);localStorage.setItem(SYNC_UPDATED_KEY,String(Date.now()));cloudReady=true;updateSyncCodeButton();await flushCloudSync();return;}
+    if(!syncCode){syncCode=await cloudRpc('create_study_code');if(!/^\d{6}$/.test(syncCode))throw new Error('Mã trả về không hợp lệ.');localStorage.setItem(SYNC_CODE_KEY,syncCode);localStorage.setItem(SYNC_UPDATED_KEY,String(Date.now()));cloudReady=true;updateSyncCodeButton();await flushCloudSync();startLastSeenTracking();return;}
     updateSyncCodeButton();const remote=await cloudRpc('get_study_data',{p_code:syncCode});
     if(!remote?.payload?.db)throw new Error('Không tìm thấy mã đồng bộ.');
     const localTime=Number(localStorage.getItem(SYNC_UPDATED_KEY))||0;const remoteTime=Number(remote.payload.deviceUpdatedAt)||Date.parse(remote.updated_at)||0;
-    if(localTime>remoteTime){cloudReady=true;updateSyncCodeButton();await flushCloudSync();return;}
-    db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(remoteTime||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;if(db.session)view='exam';render();setSyncStatus('Đã đồng bộ');cloudReady=true;updateSyncCodeButton();
+    if(localTime>remoteTime){cloudReady=true;updateSyncCodeButton();await flushCloudSync();startLastSeenTracking();return;}
+    db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(remoteTime||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;if(db.session)view='exam';render();setSyncStatus('Đã đồng bộ');cloudReady=true;updateSyncCodeButton();startLastSeenTracking();
   }catch(e){cloudReady=true;updateSyncCodeButton();setSyncStatus('Chưa kết nối · lưu trên thiết bị');}
 }
 async function copySyncCode(){if(!syncCode)return;try{await navigator.clipboard.writeText(syncCode);setSyncStatus('Đã sao chép mã');}catch(e){prompt('Mã đồng bộ của bạn:',syncCode);}}
@@ -104,11 +107,11 @@ async function restoreSyncCode(){
   const entered=prompt('Nhập mã 6 số từ thiết bị cũ để khôi phục dữ liệu:');if(entered===null)return;const code=entered.trim();
   if(!/^\d{6}$/.test(code)){alert('Mã cần gồm đúng 6 chữ số.');return;}
   setSyncStatus('Đang khôi phục…');cloudReady=false;updateSyncCodeButton();
-  try{const remote=await cloudRpc('get_study_data',{p_code:code});if(!remote?.payload?.db)throw new Error('Không tìm thấy dữ liệu cho mã này.');syncCode=code;localStorage.setItem(SYNC_CODE_KEY,code);db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(Number(remote.payload.deviceUpdatedAt)||Date.parse(remote.updated_at)||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;if(db.session)view='exam';cloudReady=true;updateSyncCodeButton();render();setSyncStatus('Đã khôi phục dữ liệu');window.scrollTo({top:0,behavior:'smooth'});}
+  try{const remote=await cloudRpc('get_study_data',{p_code:code});if(!remote?.payload?.db)throw new Error('Không tìm thấy dữ liệu cho mã này.');syncCode=code;localStorage.setItem(SYNC_CODE_KEY,code);db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(Number(remote.payload.deviceUpdatedAt)||Date.parse(remote.updated_at)||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;if(db.session)view='exam';cloudReady=true;updateSyncCodeButton();render();setSyncStatus('Đã khôi phục dữ liệu');startLastSeenTracking();window.scrollTo({top:0,behavior:'smooth'});}
   catch(e){cloudReady=true;updateSyncCodeButton();setSyncStatus('Chưa khôi phục được');alert(e.message||'Không khôi phục được dữ liệu. Kiểm tra lại mã và kết nối mạng.');}
 }
-window.addEventListener('online',()=>{if(syncCode)queueCloudSync();else initializeCloudSync();});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&cloudReady&&syncCode){clearTimeout(cloudSyncTimer);flushCloudSync();}});
+window.addEventListener('online',()=>{if(syncCode){queueCloudSync();updateLastSeen();}else initializeCloudSync();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&cloudReady&&syncCode){clearTimeout(cloudSyncTimer);flushCloudSync();}else if(document.visibilityState==='visible')updateLastSeen();});
 function showStorageWarning(){
   const s=document.getElementById('storageStatus');
   if(s)s.textContent='Không lưu được trong trình duyệt';

@@ -8,8 +8,10 @@ grant usage on schema public to anon, authenticated;
 create table if not exists app_private.study_progress (
   access_code text primary key check (access_code ~ '^[0-9]{6}$'),
   payload jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default pg_catalog.now()
+  updated_at timestamptz not null default pg_catalog.now(),
+  last_seen_at timestamptz
 );
+alter table app_private.study_progress add column if not exists last_seen_at timestamptz;
 alter table app_private.study_progress enable row level security;
 revoke all on table app_private.study_progress from public, anon, authenticated;
 
@@ -72,9 +74,29 @@ begin
 end;
 $$;
 
+create or replace function public.touch_study_seen(p_code text)
+returns timestamptz
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  seen_at timestamptz;
+begin
+  if p_code is null or p_code !~ '^[0-9]{6}$' then return null; end if;
+  update app_private.study_progress
+     set last_seen_at = pg_catalog.clock_timestamp()
+   where access_code = p_code
+   returning last_seen_at into seen_at;
+  return seen_at;
+end;
+$$;
+
 revoke all on function public.create_study_code() from public;
 revoke all on function public.get_study_data(text) from public;
 revoke all on function public.save_study_data(text, jsonb) from public;
+revoke all on function public.touch_study_seen(text) from public;
 grant execute on function public.create_study_code() to anon, authenticated;
 grant execute on function public.get_study_data(text) to anon, authenticated;
 grant execute on function public.save_study_data(text, jsonb) to anon, authenticated;
+grant execute on function public.touch_study_seen(text) to anon, authenticated;
