@@ -203,6 +203,7 @@ Object.assign(CURATED_EXPLANATIONS,{
  '8:25':'Ctrl+X cắt phần văn bản được chọn và đưa tạm vào Clipboard để di chuyển. Dán bằng Ctrl+V ở vị trí mới; Ctrl+C chỉ sao chép nên bản gốc vẫn còn.',
  '10:15':'Trong khi trình chiếu, nhấp phải slide hiện tại > Go to Slide rồi chọn slide muốn nhảy tới. Cách này đi thẳng đến slide không liền kề; Next/nhấp trái chỉ chuyển lần lượt.',
  '10:11':'Paragraph > Spacing > Before/After đặt khoảng cách trước và sau cả đoạn văn. Line Spacing chỉnh khoảng cách giữa các dòng bên trong đoạn; hai thiết lập này khác nhau.',
+ '21:79':'Nhấp phải vào tệp hoặc thư mục rồi chọn Properties (Thuộc tính). Trong thẻ General, mục Attributes hiển thị các thuộc tính như Read-only và Hidden; các phím Ctrl+R, Ctrl+N, Ctrl+T trong đáp án kia dùng cho thao tác khác, không mở thuộc tính.',
  '2:40':'Back chỉ quay về trang trước trong lịch sử duyệt web, không đóng cửa sổ. Để đóng cửa sổ trình duyệt, bấm nút X hoặc dùng Alt+F4.',
  '3:10':'Page Layout > Margins mở các mẫu lề hoặc lệnh Custom Margins để nhập lề trên, dưới, trái và phải. Margins điều chỉnh khoảng trống mép giấy tới vùng văn bản, không phải thụt đầu dòng của một đoạn.',
  '3:12':'Format > Text Effects > Shadow thêm bóng cho chữ đang chọn để tạo hiệu ứng chiều sâu. Bôi đen văn bản trước; hiệu ứng này là bóng chữ, khác bóng của hình/đối tượng.',
@@ -403,10 +404,10 @@ Object.assign(CURATED_EXPLANATIONS,{
   '25:68':'Google có thể hiển thị kết quả theo loại nội dung như trang web, hình ảnh và video. Vì cả ba loại đều có thể được tìm, đáp án tổng hợp “Tất cả các đáp án trên” phù hợp.',
   '25:104':'Toán tử from: lọc thư theo địa chỉ người gửi; ví dụ tìm từ home@example.com thì nhập from:home@example.com. Đề có sai khác nhỏ giữa địa chỉ ghi trong câu và địa chỉ trong lựa chọn (thiếu dấu gạch nối), nhưng cú pháp cần nhớ là from:.'
 });
-function explainQuestion(d){
+function explainQuestion(d,examId=d.examId){
   const answer=String(d.options[d.correct]||'').replace(/^[a-d][.)]\s*/i,'');
   const prompt=String(d.prompt||'');
-  const curated=CURATED_EXPLANATIONS[`${d.examId}:${d.n}`];
+  const curated=CURATED_EXPLANATIONS[`${examId}:${d.n}`];
   if(d.correct===null||d.correct===undefined||Number(d.correct)<0){
     const note=curated||d.sourceNote||'PDF không cung cấp phương án đúng; cần đối chiếu lại đề gốc.';
     return `Không có đáp án đúng trong các lựa chọn.\nLý do: ${note}`;
