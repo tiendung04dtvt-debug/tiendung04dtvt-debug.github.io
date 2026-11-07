@@ -1481,15 +1481,15 @@ function toggleExplanation(n){
 function mistakeIds(id){return [...new Set((db.mistakes[id]||[]).map(Number))].sort((a,b)=>a-b);}
 function shuffledQuestionIds(exam){const ids=exam.questions.map(q=>q.n);for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]];}return ids;}
 function countAnswered(){return db.session?Object.keys(db.session.answers||{}).length:0;}
-function navigateTab(tab){homeTab=tab;view='home';render();window.scrollTo({top:0,behavior:'smooth'});}
+function navigateTab(tab){if(view==='exam')saveCurrentQuestion();homeTab=tab;view='home';render();window.scrollTo({top:0,behavior:'smooth'});}
 function startQuiz(id,shuffle=false){
   id=Number(id);
   if(db.session){
-    if(db.session.examId===id){view='exam';render();return;}
+    if(db.session.examId===id){resumeSession();return;}
     alert('Bạn đang có một bài làm được lưu. Hãy tiếp tục hoặc bỏ bài đang làm trước.');return;
   }
   const exam=examById(id);if(!exam)return;
-  const timeLimit=exam.timeLimit===undefined?30:exam.timeLimit;db.session={examId:id,mode:'exam',shuffled:Boolean(shuffle),questionIds:shuffle?shuffledQuestionIds(exam):exam.questions.map(q=>q.n),answers:{},deadline:timeLimit>0?Date.now()+timeLimit*60*1000:null};
+  const timeLimit=exam.timeLimit===undefined?30:exam.timeLimit;const questionIds=shuffle?shuffledQuestionIds(exam):exam.questions.map(q=>q.n);db.session={examId:id,mode:'exam',shuffled:Boolean(shuffle),questionIds,currentQuestion:questionIds[0]??null,answers:{},deadline:timeLimit>0?Date.now()+timeLimit*60*1000:null};
   saveDb();view='exam';render();window.scrollTo(0,0);
 }
 function startReview(id){
@@ -1499,11 +1499,11 @@ function startReview(id){
     if(db.session.examId===id&&db.session.mode==='review'){view='exam';render();return;}
     alert('Bạn đang có một bài làm được lưu. Hãy tiếp tục hoặc bỏ bài đang làm trước.');return;
   }
-  db.session={examId:id,mode:'review',questionIds:ids,answers:{},deadline:null};
+  db.session={examId:id,mode:'review',questionIds:ids,currentQuestion:ids[0]??null,answers:{},deadline:null};
   saveDb();view='exam';render();window.scrollTo(0,0);
 }
-function resumeSession(){view='exam';render();window.scrollTo(0,0);}
-function leaveSession(){if(timerHandle){clearInterval(timerHandle);timerHandle=null;}view='home';render();window.scrollTo(0,0);}
+function resumeSession(){view='exam';render();}
+function leaveSession(){saveCurrentQuestion();if(timerHandle){clearInterval(timerHandle);timerHandle=null;}view='home';render();window.scrollTo(0,0);}
 function discardSession(){if(!db.session)return;if(confirm('Bỏ bài đang làm? Các đáp án đã chọn của bài này sẽ bị xóa.')){db.session=null;saveDb();view='home';render();}}
 function render(){
   if(timerHandle){clearInterval(timerHandle);timerHandle=null;}
@@ -1566,6 +1566,23 @@ function updateProgressUI(){
   const bar=document.getElementById('quizProgressFill');if(bar)bar.style.width=`${Math.round(answered/total*100)}%`;
   for(const n of s.questionIds){const b=document.getElementById(`jump-${n}`);if(b)b.classList.toggle('answered',s.answers[n]!==undefined);}
 }
+let currentQuestionSaveTimer=null;
+function saveCurrentQuestion(){
+  if(view!=='exam'||!db.session)return;
+  const cards=[...document.querySelectorAll('.question-card')];if(!cards.length)return;
+  const marker=window.innerHeight*0.28;
+  let active=cards.find(el=>{const r=el.getBoundingClientRect();return r.top<=marker&&r.bottom>=marker;});
+  if(!active)active=cards.reduce((best,el)=>Math.abs(el.getBoundingClientRect().top-marker)<Math.abs(best.getBoundingClientRect().top-marker)?el:best,cards[0]);
+  const n=Number(active.id.replace('question-',''));
+  if(n&&db.session.questionIds.includes(n)){document.querySelectorAll('.jump-nav button.current').forEach(b=>b.classList.remove('current'));document.getElementById(`jump-${n}`)?.classList.add('current');if(db.session.currentQuestion!==n){db.session.currentQuestion=n;saveDb();}}
+}
+function restoreCurrentQuestion(){
+  const s=db.session;if(!s)return;
+  const lastAnswered=[...s.questionIds].reverse().find(id=>s.answers?.[id]!==undefined);
+  const n=s.currentQuestion&&s.questionIds.includes(Number(s.currentQuestion))?Number(s.currentQuestion):lastAnswered||s.questionIds[0];
+  if(n)requestAnimationFrame(()=>document.getElementById(`question-${n}`)?.scrollIntoView({behavior:'auto',block:'start'}));
+}
+window.addEventListener('scroll',()=>{if(view!=='exam'||!db.session)return;if(currentQuestionSaveTimer)clearTimeout(currentQuestionSaveTimer);currentQuestionSaveTimer=setTimeout(saveCurrentQuestion,180);},{passive:true});
 function renderExam(){
   const s=db.session;const exam=examById(s.examId);if(!exam){db.session=null;saveDb();view='home';render();return;}
   const qs=s.questionIds.map(n=>questionById(exam,n)).filter(Boolean);
@@ -1576,10 +1593,10 @@ function renderExam(){
     return `<section class="panel question-card" id="question-${q.n}"><div class="q-title"><span class="q-number">${String(q.n).padStart(2,'0')}</span><div class="q-prompt">${esc(q.prompt)}</div></div><div class="choices">${choices}</div></section>`;
   }).join('');
   main.innerHTML=`<div class="quiz-header"><div class="quiz-head-row"><div class="quiz-name"><button class="btn ghost small" onclick="leaveSession()">← Danh sách đề</button><h2>${esc(exam.title)} <span class="exam-meta">${s.mode==='review'?'· Ôn câu sai':'· Bài thi'}${s.mode==='exam'&&s.shuffled?' · Đã xáo trộn':''}</span></h2></div>${timerMarkup}</div><div class="quiz-status"><span id="answeredText">Đã trả lời ${answered}/${qs.length}</span><span>${qs.length} câu ${isTimed?'· 30 phút':'· không tính giờ'}</span></div><div class="quiz-progress"><span id="quizProgressFill" style="width:${Math.round(answered/qs.length*100)}%"></span></div></div><div class="jump-nav" aria-label="Đi đến câu hỏi">${nav}</div>${cards}<div class="quiz-footer"><span>Đã chọn <strong id="answeredFooter">${answered}/${qs.length}</strong> câu</span><button class="btn" onclick="submitQuiz(false)">${s.mode==='review'?'Hoàn tất ôn tập':'Nộp bài'}</button></div>`;
-  if(isTimed)startTimer();
+  restoreCurrentQuestion();if(isTimed)startTimer();
 }
-function chooseAnswer(n,i){if(!db.session)return;db.session.answers[n]=i;saveDb();const card=document.getElementById(`question-${n}`);if(card){card.querySelectorAll('.choice').forEach((el,k)=>el.classList.toggle('selected',k===i));}const f=document.getElementById('answeredFooter');if(f)f.textContent=`${countAnswered()}/${db.session.questionIds.length}`;updateProgressUI();}
-function jumpTo(n){document.getElementById(`question-${n}`)?.scrollIntoView({behavior:'smooth',block:'start'});document.querySelectorAll('.jump-nav button').forEach(b=>b.classList.remove('current'));document.getElementById(`jump-${n}`)?.classList.add('current');}
+function chooseAnswer(n,i){if(!db.session)return;db.session.answers[n]=i;db.session.currentQuestion=Number(n);saveDb();const card=document.getElementById(`question-${n}`);if(card){card.querySelectorAll('.choice').forEach((el,k)=>el.classList.toggle('selected',k===i));}const f=document.getElementById('answeredFooter');if(f)f.textContent=`${countAnswered()}/${db.session.questionIds.length}`;updateProgressUI();}
+function jumpTo(n){if(db.session){db.session.currentQuestion=Number(n);saveDb();}document.getElementById(`question-${n}`)?.scrollIntoView({behavior:'smooth',block:'start'});document.querySelectorAll('.jump-nav button').forEach(b=>b.classList.remove('current'));document.getElementById(`jump-${n}`)?.classList.add('current');}
 function startTimer(){
  const el=document.getElementById('timer');const s=db.session;if(!el||!s)return;
  const tick=()=>{if(!db.session||!db.session.deadline)return;const remaining=Math.max(0,Math.ceil((db.session.deadline-Date.now())/1000));const m=String(Math.floor(remaining/60)).padStart(2,'0');const sec=String(remaining%60).padStart(2,'0');el.textContent=`${m}:${sec}`;el.classList.toggle('low',remaining<=300);if(remaining<=0){clearInterval(timerHandle);timerHandle=null;submitQuiz(true);}};
