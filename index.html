@@ -28,7 +28,7 @@
   <div class="brand"><img class="brand-mark" src="assets/dung-song-ngu-32.svg" alt="Logo DŨNG: cá koi song ngư"><div><p class="brand-owner">DŨNG</p><h1>Ôn thi CNTT cơ bản</h1><p>10 đề trắc nghiệm, bài lý thuyết PDF và 6 module ôn tập</p></div></div>
   <div class="top-actions"><span class="storage-status" id="storageStatus">Đang kết nối…</span><button class="btn secondary small" id="syncCodeButton" disabled onclick="copySyncCode()">Mã: …</button><button class="btn secondary small" id="restoreSyncCodeButton" disabled onclick="restoreSyncCode()">Nhập mã thiết bị khác</button></div>
 </header>
-<aside class="sync-hint"><strong>Mã cá nhân:</strong> mã này nhận diện nơi lưu tiến độ và câu sai của bạn. Bấm vào mã để sao chép; trên thiết bị khác, chọn <strong>Nhập mã thiết bị khác</strong>. Dùng cùng một mã trên các thiết bị của bạn để tiếp tục học.</aside>
+<aside class="sync-hint"><strong>Mã cá nhân:</strong> mã này nhận diện nơi lưu tiến độ và câu sai của bạn. Bấm vào mã để sao chép; trên thiết bị khác, chọn <strong>Nhập mã thiết bị khác</strong>. Dùng cùng một mã trên các thiết bị của bạn để tiếp tục học. Khi trang đang mở, web gửi tín hiệu hoạt động định kỳ và lưu nhãn thiết bị/trình duyệt chung để hiển thị trạng thái gần đúng; không thu thập IP hay Gmail.</aside>
 <main id="main"></main>
 <div class="source-note">Các câu hỏi và lựa chọn được trích từ PDF bạn cung cấp. Tiến độ tự lưu và đồng bộ bằng mã 6 số.</div>
 </div>
@@ -86,8 +86,15 @@ async function cloudRpc(name,args={}){
   const text=await response.text();if(!response.ok)throw new Error(`Supabase ${response.status}: ${text.slice(0,180)}`);return text?JSON.parse(text):null;
 }
 function normalizeCloudDb(saved){return {...emptyDb(),...saved,mistakes:saved?.mistakes||{},attempts:saved?.attempts||{},best:saved?.best||{}};}
-async function updateLastSeen(){if(!cloudReady||!syncCode||document.visibilityState==='hidden')return;try{await cloudRpc('touch_study_seen',{p_code:syncCode});}catch(e){}}
-function startLastSeenTracking(){if(lastSeenTimer)return;updateLastSeen();lastSeenTimer=setInterval(updateLastSeen,5*60*1000);}
+function getDeviceLabel(){
+  const ua=navigator.userAgent||'';
+  const platform=navigator.userAgentData?.platform||navigator.platform||ua;
+  const device=/Android/i.test(ua)?'Android':/iPhone|iPad|iPod/i.test(ua)?'iPhone/iPad':/Win/i.test(platform)?'Windows':/Mac/i.test(platform)?'macOS':/Linux/i.test(platform)?'Linux':'Thiết bị khác';
+  const browser=/Edg\//i.test(ua)?'Edge':/OPR\//i.test(ua)?'Opera':/Firefox\//i.test(ua)?'Firefox':/Chrome\//i.test(ua)&&!/Edg\//i.test(ua)?'Chrome':/Safari\//i.test(ua)&&!/Chrome\//i.test(ua)?'Safari':'Trình duyệt khác';
+  return `${device} · ${browser}`;
+}
+async function updateLastSeen(){if(!cloudReady||!syncCode||document.visibilityState==='hidden'||!document.hasFocus())return;try{await cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel()});}catch(e){}}
+function startLastSeenTracking(){if(lastSeenTimer)return;updateLastSeen();lastSeenTimer=setInterval(updateLastSeen,30*1000);}
 function queueCloudSync(){if(!cloudReady||!syncCode)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(flushCloudSync,700);}
 async function flushCloudSync(){
   if(!cloudReady||!syncCode)return;if(cloudSyncRunning){cloudSyncQueued=true;return;}cloudSyncRunning=true;
@@ -136,6 +143,7 @@ async function restoreSyncCode(){
   catch(e){cloudReady=true;updateSyncCodeButton();setSyncStatus('Chưa khôi phục được');alert(e.message||'Không khôi phục được dữ liệu. Kiểm tra lại mã và kết nối mạng.');}
 }
 window.addEventListener('online',()=>{if(syncCode){queueCloudSync();updateLastSeen();}else initializeCloudSync();});
+window.addEventListener('focus',updateLastSeen);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&cloudReady&&syncCode){clearTimeout(cloudSyncTimer);flushCloudSync();}else if(document.visibilityState==='visible')updateLastSeen();});
 function showStorageWarning(){
   const s=document.getElementById('storageStatus');
