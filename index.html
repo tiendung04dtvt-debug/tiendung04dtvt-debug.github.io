@@ -79,7 +79,7 @@ function saveDb(){
 }
 function readAppViewState(){try{return JSON.parse(sessionStorage.getItem(APP_VIEW_KEY)||'null');}catch(e){return null;}}
 function saveAppViewState(){try{sessionStorage.setItem(APP_VIEW_KEY,JSON.stringify({view,homeTab,studyExamId,scrollY:window.scrollY}));}catch(e){}}
-function setSyncStatus(message,detail=''){const el=document.getElementById('storageStatus');if(el){el.textContent=message;el.title=detail?`Chi tiết đồng bộ: ${detail}`:'';el.setAttribute('aria-label',detail?`${message}. Chi tiết: ${detail}`:message);}}
+function setSyncStatus(message,detail=''){const el=document.getElementById('storageStatus');if(el){el.textContent=message;el.title=detail?`Bấm để xem lỗi đồng bộ: ${detail}`:'';el.setAttribute('aria-label',detail?`${message}. Bấm để xem chi tiết lỗi.`:message);el.style.cursor=detail?'help':'';el.onclick=detail?()=>alert(`Chi tiết đồng bộ:\n${detail}`):null;}}
 function updateSyncCodeButton(){const b=document.getElementById('syncCodeButton');if(b){b.textContent=syncCode?`Mã cá nhân: ${syncCode}`:'Mã cá nhân: …';b.disabled=!syncCode;}const r=document.getElementById('restoreSyncCodeButton');if(r)r.disabled=!cloudReady;}
 async function cloudRpc(name,args={}){
   const response=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
