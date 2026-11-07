@@ -1137,7 +1137,9 @@ function explainQuestion(d){
   else reason=`Câu này hỏi về: “${prompt}” Đáp án “${answer}” là phương án khớp với yêu cầu; đối chiếu khái niệm hoặc thao tác trong đáp án với điều kiện nêu trong đề để loại các lựa chọn không phù hợp.`;
   }
   // Targeted explanations for questions that need their own reasoning, not a broad topic template.
-  if(p.includes('tạo mới 1 slide bằng cách sao chép')) reason='Ctrl+D nhân đôi slide đang chọn trong PowerPoint, tạo một bản sao để chỉnh riêng mà không làm mất slide gốc. Chọn đúng slide trước khi dùng phím tắt.';
+  if(p.includes('hệ điều hành nào sau đây không sử dụng cho máy tính để bàn')&&a==='android') reason='Android là hệ điều hành nhưng chủ yếu được thiết kế cho điện thoại và máy tính bảng. Trong phạm vi đề Tin học cơ bản, Windows 7, Windows XP và Linux là các lựa chọn dùng cho máy tính để bàn; vì vậy Android là đáp án cần chọn.';
+  else if(p.includes('nút stop')&&p.includes('trình duyệt web')) reason='Stop dừng việc tải nội dung của trang hiện tại khi trang chưa tải xong. Refresh tải lại trang; Back quay về trang trước; Home mở trang chủ. Stop không đóng trình duyệt.';
+  else if(p.includes('tạo mới 1 slide bằng cách sao chép')) reason='Ctrl+D nhân đôi slide đang chọn trong PowerPoint, tạo một bản sao để chỉnh riêng mà không làm mất slide gốc. Chọn đúng slide trước khi dùng phím tắt.';
   else if(p.includes('thêm 1 slide giống slide được chọn')) reason='Alt, H, I, D là chuỗi phím truy cập lệnh Duplicate Slide trên một số phiên bản PowerPoint: lần lượt mở các tab/menu rồi chọn nhân đôi. Giao diện hoặc phím tắt có thể khác giữa phiên bản; Ctrl+D thường là cách trực tiếp.';
   else if(p.includes('xếp loại "xuất sắc"')) reason='Filter/AutoFilter bật bộ lọc ở tiêu đề cột, rồi chọn giá trị “Xuất sắc” trong cột xếp loại. Nó chỉ ẩn tạm các dòng không khớp; không xóa dữ liệu.';
   else if(p.includes('xem được trang web')) reason='Muốn xem trang web cần trình duyệt (Chrome, Edge, Firefox…) để gửi yêu cầu tới website và hiển thị nội dung. Kết nối Internet cũng cần có, nhưng câu hỏi đang hỏi phần mềm cần cài.';
