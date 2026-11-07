@@ -79,7 +79,7 @@ function saveDb(){
 }
 function readAppViewState(){try{return JSON.parse(sessionStorage.getItem(APP_VIEW_KEY)||'null');}catch(e){return null;}}
 function saveAppViewState(){try{sessionStorage.setItem(APP_VIEW_KEY,JSON.stringify({view,homeTab,studyExamId,scrollY:window.scrollY}));}catch(e){}}
-function setSyncStatus(message){const el=document.getElementById('storageStatus');if(el)el.textContent=message;}
+function setSyncStatus(message,detail=''){const el=document.getElementById('storageStatus');if(el){el.textContent=message;el.title=detail?`Chi tiết đồng bộ: ${detail}`:'';el.setAttribute('aria-label',detail?`${message}. Chi tiết: ${detail}`:message);}}
 function updateSyncCodeButton(){const b=document.getElementById('syncCodeButton');if(b){b.textContent=syncCode?`Mã cá nhân: ${syncCode}`:'Mã cá nhân: …';b.disabled=!syncCode;}const r=document.getElementById('restoreSyncCodeButton');if(r)r.disabled=!cloudReady;}
 async function cloudRpc(name,args={}){
   const response=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
@@ -92,20 +92,40 @@ function queueCloudSync(){if(!cloudReady||!syncCode)return;clearTimeout(cloudSyn
 async function flushCloudSync(){
   if(!cloudReady||!syncCode)return;if(cloudSyncRunning){cloudSyncQueued=true;return;}cloudSyncRunning=true;
   const timestamp=Number(localStorage.getItem(SYNC_UPDATED_KEY))||Date.now();
-  try{const ok=await cloudRpc('save_study_data',{p_code:syncCode,p_payload:{db,deviceUpdatedAt:timestamp}});if(ok!==true)throw new Error('Mã đồng bộ chưa tồn tại.');setSyncStatus('Đã đồng bộ');}
-  catch(e){setSyncStatus('Chưa đồng bộ · vẫn lưu trên thiết bị');}
+  try{
+    let ok=await cloudRpc('save_study_data',{p_code:syncCode,p_payload:{db,deviceUpdatedAt:timestamp}});
+    if(ok!==true){
+      // A code can be removed from Supabase while a browser still has it locally.
+      // Allocate a replacement and preserve this browser's current study data.
+      await createFreshSyncCode();
+      ok=await cloudRpc('save_study_data',{p_code:syncCode,p_payload:{db,deviceUpdatedAt:timestamp}});
+      if(ok!==true)throw new Error('Supabase did not save progress under the replacement code.');
+    }
+    setSyncStatus('Đã đồng bộ');
+  }
+  catch(e){console.warn('Study progress sync failed:',e);setSyncStatus('Chưa đồng bộ · vẫn lưu trên thiết bị',e.message||String(e));}
   finally{cloudSyncRunning=false;if(cloudSyncQueued){cloudSyncQueued=false;queueCloudSync();}}
+}
+async function createFreshSyncCode(){
+  const code=await cloudRpc('create_study_code');
+  if(!/^\d{6}$/.test(String(code)))throw new Error('RPC create_study_code không trả về mã 6 chữ số.');
+  syncCode=String(code);localStorage.setItem(SYNC_CODE_KEY,syncCode);localStorage.setItem(SYNC_UPDATED_KEY,String(Date.now()));cloudReady=true;updateSyncCodeButton();
 }
 async function initializeCloudSync(){
   setSyncStatus('Đang kết nối…');
   try{
-    if(!syncCode){syncCode=await cloudRpc('create_study_code');if(!/^\d{6}$/.test(syncCode))throw new Error('Mã trả về không hợp lệ.');localStorage.setItem(SYNC_CODE_KEY,syncCode);localStorage.setItem(SYNC_UPDATED_KEY,String(Date.now()));cloudReady=true;updateSyncCodeButton();await flushCloudSync();startLastSeenTracking();return;}
+    if(!syncCode){await createFreshSyncCode();await flushCloudSync();startLastSeenTracking();return;}
     updateSyncCodeButton();const remote=await cloudRpc('get_study_data',{p_code:syncCode});
-    if(!remote?.payload?.db)throw new Error('Không tìm thấy mã đồng bộ.');
+    if(!remote){await createFreshSyncCode();await flushCloudSync();startLastSeenTracking();return;}
+    if(!remote.payload?.db){
+      // A freshly created row may still contain the default empty JSON object.
+      // Keep local progress and seed that row instead of treating it as corrupt.
+      localStorage.setItem(SYNC_UPDATED_KEY,String(Date.now()));cloudReady=true;updateSyncCodeButton();await flushCloudSync();startLastSeenTracking();return;
+    }
     const localTime=Number(localStorage.getItem(SYNC_UPDATED_KEY))||0;const remoteTime=Number(remote.payload.deviceUpdatedAt)||Date.parse(remote.updated_at)||0;
     if(localTime>remoteTime){cloudReady=true;updateSyncCodeButton();await flushCloudSync();startLastSeenTracking();return;}
     db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(remoteTime||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;render();setSyncStatus('Đã đồng bộ');cloudReady=true;updateSyncCodeButton();startLastSeenTracking();
-  }catch(e){cloudReady=true;updateSyncCodeButton();setSyncStatus('Chưa kết nối · lưu trên thiết bị');}
+  }catch(e){console.warn('Study progress initialization failed:',e);cloudReady=true;updateSyncCodeButton();setSyncStatus('Chưa kết nối · lưu trên thiết bị',e.message||String(e));}
 }
 async function copySyncCode(){if(!syncCode)return;try{await navigator.clipboard.writeText(syncCode);setSyncStatus('Đã sao chép mã');}catch(e){prompt('Mã đồng bộ của bạn:',syncCode);}}
 async function restoreSyncCode(){
