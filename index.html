@@ -69,9 +69,86 @@ function showStorageWarning(){
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function examById(id){return EXAMS.find(e=>e.id===Number(id));}
 function questionById(exam,id){return exam.questions.find(q=>q.n===Number(id));}
+// Carefully reviewed, question-specific explanations for items where a broad topic
+// rule would be too vague, misleading, or would miss an important distinction.
+const CURATED_EXPLANATIONS={
+ '1:6':'Freeze Panes giữ hàng/cột đứng yên khi cuộn trang tính; chọn ô ngay dưới hàng cần giữ rồi chọn View > Freeze Panes. Cụm “lặp lại qua các trang” ở đây nói về lúc cuộn; nếu muốn lặp tiêu đề trên bản in thì dùng Page Layout > Print Titles.',
+ '1:33':'Trong Word, Ctrl+D mở hộp thoại Font. Chọn thẻ Advanced (nếu phiên bản có thẻ này), đặt Spacing thành Expanded để giãn hoặc Condensed để thu hẹp khoảng cách ký tự; thao tác này khác giãn dòng/giãn đoạn.',
+ '2:19':'Phát biểu B sai vì tệp thông thường chứa nội dung dữ liệu, không chứa cây thư mục con. Thư mục mới là nơi chứa tệp và thư mục con; nếu muốn gói nhiều mục trong một tệp thì đó là tệp nén như ZIP/RAR.',
+ '2:38':'Paste Special > Microsoft Excel Worksheet Object dán vùng đã sao chép dưới dạng đối tượng bảng tính Excel trong Word. Nhờ vậy nội dung giữ cấu trúc ô và có thể mở/chỉnh bằng công cụ Excel; dán thường chỉ đưa nội dung vào tài liệu Word.',
+ '3:21':'Máy quét thường kết nối với máy tính qua cổng USB. USB truyền dữ liệu giữa thiết bị và máy tính; lưu ý đây là cổng kết nối, còn “thiết bị nhập” là chức năng của máy quét.',
+ '3:35':'Đường gạch đỏ/xanh là dấu kiểm tra chính tả/ngữ pháp của Word, không phải nội dung văn bản. File > Options > Proofing cho phép tắt kiểm tra khi gõ và các gạch sẽ biến mất; việc này không sửa hay xóa chữ trong tài liệu.',
+ '4:18':'Page Layout > Orientation > Landscape đổi trang giấy sang chiều ngang; Portrait là chiều dọc. Chọn đúng section nếu chỉ muốn đổi hướng một phần tài liệu.',
+ '4:26':'Trojan (mã độc dạng ngựa thành Troy) giả dạng phần mềm/tệp có vẻ hữu ích để dụ người dùng chạy; nó có thể phá hoại nhưng không tự nhân bản như virus. Vì câu hỏi nêu rõ “không tự sao chép”, Trojan là lựa chọn phù hợp nhất.',
+ '4:27':'Region trong Control Panel đặt quy ước vùng như hệ đo Metric/US, định dạng ngày, số và tiền tệ. Đây là thiết lập vùng của Windows, không phải đổi ngôn ngữ giao diện hay phần cứng.',
+ '4:37':'VALUE chuyển chuỗi số thành giá trị số, nhưng “TINHOC” không phải chuỗi biểu diễn số. Vì vậy Excel không thể chuyển đổi và trả lỗi #VALUE!.',
+ '5:3':'Đáp án A gom bàn phím, chuột và máy quét—đều là thiết bị nhập—thành một nhóm đồng nhất. Các nhóm B, C, D trộn thiết bị nhập, xuất hoặc lưu trữ, nên A là nhóm khác biệt theo cách ra đề; “máy scan” và “máy quét” là cùng một thiết bị.',
+ '5:11':'Để in theo chiều dọc, mở Design > Slide Size > Custom Slide Size. Trong phần Orientation, chọn Portrait cho Notes, Handouts and Outline; lựa chọn này đổi hướng trang ghi chú/tài liệu phát tay, không nhất thiết đổi hướng slide chiếu.',
+ '5:14':'Muốn xóa cả văn bản đã bôi đen, trước tiên chọn đúng đoạn chữ rồi nhấn Delete hoặc Backspace. Cách trong đáp án dùng menu chuột phải > Delete; chọn viền hộp văn bản trước nếu cần xóa cả khung chứ không chỉ chữ bên trong.',
+ '5:18':'Ctrl+J bật/tắt căn đều hai lề cho đoạn văn bản được chọn. Word điều chỉnh khoảng trắng giữa các từ để cả mép trái lẫn mép phải thẳng hàng; Ctrl+E mới là căn giữa.',
+ '5:20':'Để giảm nguy cơ lây mã độc qua email, cần kết hợp cả ba việc được liệt kê: cập nhật/chạy phần mềm diệt virus, cảnh giác với thư và tệp đính kèm lạ, và quét tệp trước khi mở. “Tất cả” đúng vì từng biện pháp xử lý một nguồn rủi ro khác nhau.',
+ '5:24':'UniKey là bộ gõ tiếng Việt chạy trên Windows, giúp nhập dấu theo kiểu Telex hoặc VNI. Nó không phải hệ điều hành; Windows là hệ điều hành còn UniKey là phần mềm tiện ích.',
+ '5:31':'Trong đề, EVERAGE bị viết sai tên hàm; Excel không có hàm này và nhập nguyên văn sẽ báo #NAME?. Nếu ý đề là AVERAGE(5,7,9), phép tính là (5+7+9)/3 = 7, nên đáp án 7 chỉ đúng sau khi sửa lỗi chính tả.',
+ '6:6':'Home > Layout mở danh sách bố cục slide. Chọn bố cục phù hợp để xác định các vùng giữ chỗ (tiêu đề, nội dung, hình ảnh…); lệnh này đổi cách sắp xếp nội dung trên slide, không đổi màu/chủ đề.',
+ '6:13':'Insert > Symbol mở thư viện ký tự đặc biệt để chèn ký hiệu không có sẵn trực tiếp trên bàn phím. Đặt con trỏ tại nơi cần chèn, chọn ký hiệu rồi bấm Insert; ký hiệu © là một ví dụ, nhưng lệnh dùng được cho nhiều ký tự.',
+ '6:16':'Trong kết nối quay số Dial-up, máy tính gửi/nhận dữ liệu qua modem, đường dây điện thoại rồi tới nhà cung cấp Internet (ISP). Thứ tự trong đáp án mô tả đường đi của kết nối; Dial-up dùng đường điện thoại nên chậm hơn ADSL/FTTH.',
+ '6:17':'Ctrl+E căn giữa đoạn văn bản đã chọn. Ctrl+L căn trái, Ctrl+R căn phải và Ctrl+J căn đều hai lề; các phím này đổi căn chỉnh, không đổi kiểu chữ.',
+ '7:7':'Foxit Reader là chương trình đọc tệp PDF. Phần mở rộng .pdf nhận biết định dạng tài liệu; cần ứng dụng hỗ trợ PDF để mở và xem nội dung.',
+ '7:9':'Trong Excel, F9 có thể tính thử phần biểu thức đang được chọn trên thanh công thức để kiểm tra giá trị trung gian. Sau khi xem kết quả, nhấn Esc để hủy phép thay thế đó và giữ nguyên công thức.',
+ '7:11':'Đề PDF bị trích lệch: câu này lặp nguyên văn câu trước về dịch vụ Internet, nhưng các lựa chọn và đáp án đều là đường dẫn chỉnh giãn dòng trong Word. Theo nội dung đáp án, mở Home > Paragraph (hộp thoại Paragraph) > Spacing > Line Spacing để đổi khoảng cách dòng; nên xem đây là câu Word bị sai tiêu đề trong PDF.',
+ '7:14':'Nút % áp dụng định dạng Percentage cho ô: ví dụ giá trị 0,25 hiển thị thành 25%. Nó thay cách hiển thị giá trị theo quy ước phần trăm, không phải lệnh chia số đang chọn cho 100.',
+ '7:16':'Các cách trong đề đều có thể dẫn tới website: gõ URL trên thanh địa chỉ, nhấp một liên kết, hoặc mở địa chỉ IP nếu máy chủ cho phép truy cập bằng IP. Vì cả ba cách đều được nêu nên chọn “Tất cả đều đúng”.',
+ '7:17':'AND(DTB>=8, HK="A") yêu cầu cả hai điều kiện cùng đúng. DTB=9 làm điều kiện đầu đúng nhưng HK=C làm điều kiện thứ hai sai, nên AND trả FALSE và IF chọn nhánh 1000.',
+ '8:2':'Ctrl+B bật/tắt chữ đậm trong Word. Nếu đang bôi đen, nó áp dụng cho phần chọn; nếu con trỏ đứng trong đoạn, nó áp dụng cho chữ sẽ gõ tiếp cho tới khi tắt lại.',
+ '8:6':'View > Window > Arrange All sắp xếp các cửa sổ tài liệu Word đang mở để có thể nhìn nhiều tài liệu cùng lúc. Lệnh này bố trí cửa sổ trên màn hình, không sắp xếp trang hay nội dung trong tài liệu.',
+ '8:14':'Insert > Header & Footer > Footer mở vùng chân trang để nhập nội dung. Chân trang nằm ở cuối trang và có thể lặp lại trên nhiều slide; nếu chỉ muốn hiện ở slide hiện tại, kiểm tra tùy chọn Apply/Apply to All trước khi xác nhận.',
+ '8:39':'Ctrl+T mở một tab mới trong Internet Explorer. Ctrl+Tab chỉ chuyển sang tab kế tiếp đang có; Ctrl+W đóng tab hiện tại.',
+ '9:3':'Google là công cụ tìm kiếm trên web: nhập từ khóa về khách sạn Hà Nội để tìm các trang có thông tin. WWW là hệ thống trang web, còn trình duyệt là phần mềm mở chúng; Google trong đáp án đóng vai trò tìm thông tin.',
+ '9:9':'Phím mũi tên phải di chuyển con trỏ văn bản sang phải một vị trí ký tự trong dòng hiện tại. Nó không xóa hay chèn chữ; phím mũi tên lên/xuống di chuyển giữa các dòng.',
+ '9:23':'Home > Layout > Title and Content áp dụng bố cục có vùng tiêu đề và một vùng nội dung lớn. Placeholder nội dung có thể nhận văn bản, bảng, biểu đồ hoặc hình; chọn layout trước rồi nhập/chèn nội dung.',
+ '9:31':'Home > Numbering áp dụng danh sách đánh số cho các đoạn đã chọn hoặc đoạn mới. Mở mũi tên cạnh Numbering để chọn kiểu số; Bullets tạo dấu đầu dòng thay vì số thứ tự.',
+ '7:31':'Toán tử tìm kiếm SITE: giới hạn kết quả trong một tên miền. Gõ `Công chức site:lamdong.gov.vn` để Google chỉ trả trang thuộc website này; `FROM:` không phải cú pháp lọc miền web.',
+ '9:39':'Home > Font > Change Case đổi cách viết hoa/thường của phần chữ đã chọn, chẳng hạn UPPERCASE hoặc lowercase. Bôi đen chữ trước, rồi chọn kiểu; lệnh không đổi phông hay cỡ chữ.',
+ '10:7':'Chọn ô trong bảng, mở Table Tools > Design > Borders, rồi chọn kiểu đường viền cần áp dụng. Page Border chỉnh viền toàn trang; muốn đổi viền riêng một ô phải chọn đúng ô và thao tác ở công cụ viền bảng.',
+ '10:18':'Phím tắt Alt, N, T lần lượt mở Insert rồi Table trong phiên bản Office dùng KeyTips. Chọn số hàng/cột từ lưới hoặc Insert Table để chèn bảng tại vị trí con trỏ.',
+ '10:23':'Trên bố cục bàn phím phổ biến, giữ Shift rồi nhấn phím 5 tạo ký tự %. Đây là ký tự phần trăm; không nhầm với nút % trong Excel, vốn áp dụng định dạng phần trăm cho ô.',
+ '10:26':'Trong tên tệp Windows, dấu hai chấm `:` và dấu gạch chéo `/` đều là ký tự cấm; vì vậy `http://vtv.vn` không thể dùng nguyên chuỗi làm tên tệp. Lý do cụ thể là dấu `:` và `/`, không phải dấu gạch dưới hay khoảng trắng.',
+ '10:28':'Email không đảm bảo độ tin cậy hay an toàn tuyệt đối: thư giả mạo, tệp đính kèm độc hại hoặc gửi nhầm người vẫn có thể xảy ra. Vì câu hỏi yêu cầu phát biểu sai, mệnh đề có chữ “luôn” và “tuyệt đối” là sai.',
+ '10:36':'MID(text, start_num, num_chars) lấy một đoạn ký tự bắt đầu tại vị trí start_num. Với MID("A123B",3,2), ký tự thứ 3 là 2 và lấy 2 ký tự nên kết quả là "23"; MID trả chuỗi, dù các ký tự trông như số.',
+ '10:37':'Home > Clear All Formatting xóa định dạng trực tiếp khỏi phần văn bản đã chọn, như kiểu chữ, màu, cỡ và nhấn mạnh, rồi đưa về định dạng mặc định. Lệnh không xóa chữ; hãy bôi đen đoạn cần làm sạch trước.',
+ '10:38':'#REF! báo công thức đang trỏ tới ô/vùng tham chiếu không còn hợp lệ, thường do xóa hoặc di chuyển ô được tham chiếu. #N/A thường báo không tìm thấy giá trị tra cứu; hai lỗi này có nguyên nhân khác nhau.',
+ '10:39':'Right to Left đổi hướng sắp xếp các hộp/nút trong sơ đồ từ trái sang phải thành phải sang trái (hoặc ngược lại). Chọn tùy chọn này khi cần đảo hướng trình bày sơ đồ, không phải để căn lề đoạn văn.'
+};
+Object.assign(CURATED_EXPLANATIONS,{
+ '5:21':'Nhóm A gồm màn hình, máy in và loa—đều là thiết bị xuất. Các nhóm B, C, D đều trộn thiết bị xuất với thiết bị nhập hoặc lưu trữ, vì vậy nhóm đồng nhất A là nhóm khác biệt mà câu hỏi yêu cầu.',
+ '7:8':'Hai tài khoản không thể cùng dùng một địa chỉ email đầy đủ tại cùng nhà cung cấp, ví dụ hoahong@yahoo.com, vì hệ thống phải định tuyến thư đến một hộp thư duy nhất. Người khác có thể trùng tên hiển thị hoặc dùng chuỗi tương tự ở một nhà cung cấp khác.',
+ '7:18':'Cài phần mềm bị bẻ khóa thường vi phạm quyền sử dụng/bản quyền vì dùng hoặc sửa phần mềm ngoài giấy phép của chủ sở hữu. Câu hỏi yêu cầu phát biểu sai; mệnh đề nói việc đó “không vi phạm” là sai.',
+ '8:25':'Ctrl+X cắt phần văn bản được chọn và đưa tạm vào Clipboard để di chuyển. Dán bằng Ctrl+V ở vị trí mới; Ctrl+C chỉ sao chép nên bản gốc vẫn còn.',
+ '10:15':'Trong khi trình chiếu, nhấp phải slide hiện tại > Go to Slide rồi chọn slide muốn nhảy tới. Cách này đi thẳng đến slide không liền kề; Next/nhấp trái chỉ chuyển lần lượt.',
+ '10:11':'Paragraph > Spacing > Before/After đặt khoảng cách trước và sau cả đoạn văn. Line Spacing chỉnh khoảng cách giữa các dòng bên trong đoạn; hai thiết lập này khác nhau.',
+ '2:40':'Back chỉ quay về trang trước trong lịch sử duyệt web, không đóng cửa sổ. Để đóng cửa sổ trình duyệt, bấm nút X hoặc dùng Alt+F4.',
+ '3:10':'Page Layout > Margins mở các mẫu lề hoặc lệnh Custom Margins để nhập lề trên, dưới, trái và phải. Margins điều chỉnh khoảng trống mép giấy tới vùng văn bản, không phải thụt đầu dòng của một đoạn.',
+ '3:12':'Format > Text Effects > Shadow thêm bóng cho chữ đang chọn để tạo hiệu ứng chiều sâu. Bôi đen văn bản trước; hiệu ứng này là bóng chữ, khác bóng của hình/đối tượng.',
+ '4:4':'Chọn ô cần tô, vào Table Tools > Design > Shading rồi chọn màu nền. Shading tô bên trong ô; Borders đổi đường viền quanh ô.',
+ '4:30':'File > Print > Settings > 1 Slide (Full Page Slides) in mỗi slide trên một tờ giấy. Chọn Handouts nếu muốn in nhiều slide thu nhỏ trên cùng một tờ.',
+ '5:34':'Insert > Shapes mở thư viện hình vẽ như mũi tên, hình chữ nhật và đường thẳng. Chọn hình rồi kéo trên slide để vẽ; Pictures chèn ảnh có sẵn thay vì tạo hình.',
+ '6:7':'View > New Window mở thêm một cửa sổ hiển thị cùng bài trình chiếu đang mở. Hai cửa sổ cùng trỏ tới một tệp, nên chỉnh sửa ở cửa sổ này sẽ phản ánh trong cửa sổ kia; đây không phải tạo bản sao.',
+ '6:19':'Chọn bảng rồi dùng Table Tools > Layout > Delete > Delete Table để xóa toàn bộ bảng. Xóa nội dung từng ô sẽ để lại khung bảng, nên dùng đúng lệnh Delete Table khi muốn bỏ cả bảng.',
+ '6:29':'File > New > Blank Presentation tạo bài trình chiếu trống mới. Nếu cần dùng mẫu có sẵn thì chọn template; Blank Presentation bắt đầu từ bố cục trắng.',
+ '6:31':'Trong Word, nhấp đúp ở lề trái cạnh đoạn văn sẽ chọn đoạn đó theo thao tác nêu trong đề. Lưu ý nhấp đúp lên chính phần chữ thường chọn một từ; vị trí nhấp ở lề mới quyết định thao tác chọn đoạn.',
+ '7:39':'Insert > Illustrations là nhóm chứa các lệnh chèn đối tượng đồ họa như Pictures, Shapes, Icons hoặc Chart (tùy phiên bản Word). Nhóm này nằm ở thẻ Insert vì nó thêm nội dung vào tài liệu.',
+ '8:36':'File > Options > Proofing > AutoCorrect Options mở danh sách thay thế tự động. Chọn mục sửa tự động cần bỏ rồi Delete; thao tác này chỉ xóa quy tắc AutoCorrect đó, không xóa các từ đã có trong tài liệu.',
+ '8:38':'File > Options > Customize Ribbon cho phép bật/tắt tab và nhóm lệnh trên Ribbon, hoặc sắp xếp các tab. Nó điều chỉnh thanh Ribbon của PowerPoint, không ẩn các cửa sổ tài liệu đang mở.',
+ '8:40':'Workdocument không phải tên thành phần chuẩn của Excel. Các khái niệm quen thuộc là workbook (tệp bảng tính), worksheet (trang tính), cell (ô) và chart (biểu đồ); không nhầm workbook với tài liệu Word.',
+ '9:4':'Home > Delete > Delete Sheet Rows xóa toàn bộ hàng đã chọn khỏi trang tính; dữ liệu bên dưới được dồn lên. Chọn cả hàng trước để xóa hàng, nếu chỉ chọn ô thì các lệnh Delete khác có thể xóa ô hoặc dịch chuyển vùng.',
+ '9:7':'Shift+Delete xóa tệp bỏ qua Recycle Bin nên không thể khôi phục bằng cách bấm Restore trong thùng rác. Có thể còn cơ hội khôi phục bằng công cụ chuyên dụng trước khi vùng đĩa bị ghi đè, nhưng không nên coi đó là chắc chắn.',
+ '10:11':'Paragraph > Spacing > Before/After đặt khoảng cách trước và sau cả đoạn văn. Line Spacing chỉnh khoảng cách giữa các dòng bên trong đoạn; hai thiết lập này khác nhau.'
+});
 function explainQuestion(d){
   const answer=String(d.options[d.correct]||'').replace(/^[a-d][.)]\s*/i,'');
   const prompt=String(d.prompt||'');
+  const curated=CURATED_EXPLANATIONS[`${d.examId}:${d.n}`];
+  if(curated)return `Đáp án đúng: ${answer}.\nLý do: ${curated}${d.sourceNote?'\nLưu ý về nguồn: '+d.sourceNote:''}`;
   if(d.explanation)return `Đáp án đúng: ${answer}.\nLý do: ${d.explanation}${d.sourceNote?'\nLưu ý về nguồn: '+d.sourceNote:''}`;
   const p=prompt.toLowerCase();
   const a=answer.toLowerCase();
@@ -1269,7 +1346,7 @@ function renderHome(tab='exams'){
       const questionHtml=studyExam.questions.map(q=>{
         const answer=Number(q.answer);
         const optionsHtml=q.options.map((opt,i)=>`<div class="result-option ${i===answer?'correct':''}"><span class="result-radio">${i===answer?'✓':''}</span><span class="result-text">${esc(opt)}</span>${i===answer?'<span class="result-flag">ĐÁP ÁN ĐÚNG</span>':''}</div>`).join('');
-        const explanation=explainQuestion({n:q.n,prompt:q.prompt,options:q.options,correct:answer,explanation:q.explanation,sourceNote:q.sourceNote});
+        const explanation=explainQuestion({examId:studyExam.id,n:q.n,prompt:q.prompt,options:q.options,correct:answer,explanation:q.explanation,sourceNote:q.sourceNote});
         const reason=explanation.split('\nLý do: ')[1]||explanation.replace(/^Đáp án đúng: [^\n]+\n?/, '');
         return `<article class="panel study-question"><h3><span class="study-number">${String(q.n).padStart(2,'0')}</span><span>Câu ${String(q.n).padStart(2,'0')}. ${esc(q.prompt)}</span></h3><div class="result-options">${optionsHtml}</div><div class="study-explanation"><strong>Giải thích</strong><p>${esc(reason)}</p>${q.sourceNote?`<small>Đối chiếu PDF: ${esc(q.sourceNote)}</small>`:''}</div></article>`;
       }).join('');
@@ -1330,7 +1407,7 @@ function submitQuiz(force){
 }
 function renderResult(r){
   const exam=examById(r.examId);const percent=Math.round(r.score/r.total*100);
-  const questionHtml=r.details.map(d=>{const optionsHtml=d.options.map((opt,i)=>{const correct=i===d.correct,selected=i===d.selected;const cls=correct?'correct':selected?'wrong-selected':'';const flag=correct?'ĐÁP ÁN ĐÚNG':selected?'BẠN ĐÃ CHỌN':'';return `<div class="result-option ${cls}"><span class="result-radio">${correct?'✓':selected?'×':''}</span><span class="result-text">${esc(opt)}</span>${flag?`<span class="result-flag">${flag}</span>`:''}</div>`;}).join('');const explanationHtml=exam.showExplanations===false?'':`<button type="button" class="btn secondary small" id="explanation-button-${d.n}" aria-expanded="false" onclick="toggleExplanation(${d.n})">Giải thích câu hỏi</button><div id="explanation-${d.n}" class="notice hidden" style="margin-top:10px;white-space:pre-line">${esc(explainQuestion(d))}</div>`;return `<article class="panel wrong-result ${d.isCorrect?'correct-result':'incorrect'}"><h4>Câu ${String(d.n).padStart(2,'0')}. ${esc(d.prompt)}</h4><div class="result-options">${optionsHtml}</div>${d.sourceNote?`<div class="notice warning source-warning"><strong>Đối chiếu PDF:</strong> ${esc(d.sourceNote)}</div>`:''}${explanationHtml}</article>`;}).join('');
+  const questionHtml=r.details.map(d=>{const optionsHtml=d.options.map((opt,i)=>{const correct=i===d.correct,selected=i===d.selected;const cls=correct?'correct':selected?'wrong-selected':'';const flag=correct?'ĐÁP ÁN ĐÚNG':selected?'BẠN ĐÃ CHỌN':'';return `<div class="result-option ${cls}"><span class="result-radio">${correct?'✓':selected?'×':''}</span><span class="result-text">${esc(opt)}</span>${flag?`<span class="result-flag">${flag}</span>`:''}</div>`;}).join('');const explanationHtml=exam.showExplanations===false?'':`<button type="button" class="btn secondary small" id="explanation-button-${d.n}" aria-expanded="false" onclick="toggleExplanation(${d.n})">Giải thích câu hỏi</button><div id="explanation-${d.n}" class="notice hidden" style="margin-top:10px;white-space:pre-line">${esc(explainQuestion(d,r.examId))}</div>`;return `<article class="panel wrong-result ${d.isCorrect?'correct-result':'incorrect'}"><h4>Câu ${String(d.n).padStart(2,'0')}. ${esc(d.prompt)}</h4><div class="result-options">${optionsHtml}</div>${d.sourceNote?`<div class="notice warning source-warning"><strong>Đối chiếu PDF:</strong> ${esc(d.sourceNote)}</div>`:''}${explanationHtml}</article>`;}).join('');
   main.innerHTML=`<section class="panel result-hero"><div class="score-ring"><strong>${r.score}</strong><span>trên ${r.total}</span></div><h2>${r.mode==='review'?'Kết quả ôn câu sai':'Đã nộp bài'}</h2><p><strong>${esc(exam.title)}</strong> · ${percent}% đúng · ${r.wrongCount} câu sai/chưa trả lời</p><p>${r.remainingMistakes?`Còn ${r.remainingMistakes} câu trong kho để làm lại.`:'Kho câu sai của đề này đã trống.'}</p><div class="result-actions"><button class="btn" onclick="navigateTab('bank')">Mở kho câu sai (${r.remainingMistakes})</button><button class="btn secondary" onclick="startQuiz(${r.examId})">Làm lại toàn đề</button><button class="btn ghost" onclick="navigateTab('exams')">Về danh sách đề</button></div></section><section class="review-results"><div class="section-head"><div><h2>Đối chiếu câu trả lời</h2>${exam.showExplanations===false?'':'<p>Bấm “Giải thích câu hỏi” ở câu bạn muốn xem lời giải ngắn.</p>'}</div></div>${questionHtml}</section>`;
 }
 function exportBackup(){
