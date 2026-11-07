@@ -15,7 +15,8 @@
 .result-options{display:grid;gap:8px;margin-top:14px}.result-option{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#52647d;font-size:14px;line-height:1.45}.result-option .result-radio{flex:0 0 20px;width:20px;height:20px;border:2px solid #aab6c6;border-radius:50%;display:grid;place-items:center;margin-top:1px;color:transparent;font-size:13px;font-weight:900}.result-option.correct{background:#e8f7ee;border-color:#b6e2c5;color:#176c3b}.result-option.correct .result-radio{border-color:#2b9a55;color:#2b9a55}.result-option.wrong-selected{background:#fff0f0;border-color:#edbfc2;color:#a12c35}.result-option.wrong-selected .result-radio{border-color:#c84850;color:#c84850}.result-option .result-flag{margin-left:auto;white-space:nowrap;font-size:11px;font-weight:800;color:inherit;padding-left:8px}.result-option .result-text{white-space:pre-wrap}
 
 .study-questions{display:grid;gap:12px}.study-question{padding:18px 20px;scroll-margin-top:20px}.study-question h3{display:flex;gap:11px;align-items:flex-start;margin:0;font-size:16px;line-height:1.5}.study-number{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-size:13px;font-weight:850}.study-explanation{margin-top:12px;padding:13px 15px;background:#f4f7fb;border:1px solid #e5ebf3;border-radius:11px;color:#34445a}.study-explanation strong{color:var(--blue);font-size:13px}.study-explanation p{margin:4px 0 0;white-space:pre-line}.study-explanation small{display:block;margin-top:8px;color:var(--muted)}@media(max-width:760px){.study-question{padding:15px}.study-question h3{font-size:15px}.study-question .result-option{padding:9px 10px;font-size:13px}.study-question .result-flag{font-size:10px}}
-.bank-list{max-height:min(42vh,360px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:8px}.bank-actions{margin:12px 0 0}.bank-actions .btn{width:100%;min-height:42px}.result-actions .btn{min-height:42px}
+.bank-list{max-height:min(42vh,360px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:8px}.bank-actions{margin:12px 0 0}.bank-actions .btn{width:100%;min-height:42px}.result-actions .btn{min-height:42px}.bank-latest{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;padding:17px 20px;border-left:4px solid var(--blue)}.bank-latest h3{margin:0;font-size:18px}.bank-latest p{margin:5px 0 0;color:var(--muted);font-size:13px}.bank-latest-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}.bank-latest-actions .btn{min-height:42px}
+@media(max-width:760px){.bank-latest{align-items:stretch;flex-direction:column;padding:15px}.bank-latest-actions{flex-direction:column}.bank-latest-actions .btn{width:100%}}
 </style>
 </head>
 <body>
@@ -37,7 +38,7 @@ let db=loadDb();
 let view='home';
 let homeTab='exams';
 let studyExamId=null;
-let latestResult=null;
+let latestResult=db.lastResult?.details?db.lastResult:null;
 let timerHandle=null;
 const main=document.getElementById('main');
 function emptyDb(){
@@ -1553,14 +1554,17 @@ function renderHome(tab='exams'){
       const action=ids.length?`<div class="bank-actions"><button class="btn" ${db.session?'disabled':''} onclick="startReview(${e.id})">Làm lại ngay ${ids.length} câu sai</button></div>`:'';
       return `<article class="panel bank-card"><div class="bank-head"><div><div class="exam-tag">${extra?'Bài bổ sung từ PDF':`Đề ${String(i+1).padStart(2,'0')}`}</div><h3>${esc(e.title)}</h3><p>${ids.length?`${ids.length} câu cần làm lại`:'Kho câu sai đang trống'}</p></div><span class="count-badge">${ids.length} câu</span></div>${action}${list}</article>`;
     }).join('');
-    body=`<div class="section-head"><div><h2>Kho câu sai theo từng đề</h2><p>Nút làm lại nằm ngay trên danh sách; danh sách dài có thể cuộn riêng. Trả lời đúng sẽ gỡ câu khỏi kho.</p></div><span class="pill" style="background:#fff0f0;color:#a4343a">${totalMistakes} câu đang lưu</span></div><div class="grid">${cards}</div>`;
+    const recentId=latestResult?.examId??db.lastResult?.examId;const recentExam=recentId?examById(recentId):null;const recentWrong=recentId?mistakeIds(recentId).length:0;
+    const latestPanel=recentExam?`<section class="panel bank-latest"><div><div class="exam-tag">VỪA LÀM XONG</div><h3>${esc(recentExam.title)} vừa làm</h3><p>${db.lastResult?.score??latestResult.score}/${db.lastResult?.total??latestResult.total} điểm · ${recentWrong} câu sai hiện còn trong kho của đề này</p></div><div class="bank-latest-actions"><button class="btn" ${recentWrong&&!db.session?'':'disabled'} onclick="startReview(${recentId})">Làm lại các câu sai (${recentWrong})</button><button class="btn ghost" ${latestResult?.details?'':'disabled'} onclick="returnToLatestResult()">Quay lại kết quả vừa nộp</button></div></section>`:'';
+    body=`${latestPanel}<div class="section-head"><div><h2>Kho câu sai theo từng đề</h2><p>Nút làm lại nằm ngay trên danh sách; danh sách dài có thể cuộn riêng. Trả lời đúng sẽ gỡ câu khỏi kho.</p></div><span class="pill" style="background:#fff0f0;color:#a4343a">${totalMistakes} câu đang lưu</span></div><div class="grid">${cards}</div>`;
   }
-  const recent=db.lastResult?`<section class="panel recent"><div><small>Lần nộp gần nhất · ${esc(new Date(db.lastResult.completedAt).toLocaleString('vi-VN'))}</small><strong>${esc(examById(db.lastResult.examId)?.title||'Đề')} · ${db.lastResult.score}/${db.lastResult.total} điểm</strong></div><span class="exam-meta">${db.lastResult.wrongCount} câu sai trong lượt đó</span></section>`:'';
+  const recent=tab!=='bank'&&db.lastResult?`<section class="panel recent"><div><small>Lần nộp gần nhất · ${esc(new Date(db.lastResult.completedAt).toLocaleString('vi-VN'))}</small><strong>${esc(examById(db.lastResult.examId)?.title||'Đề')} · ${db.lastResult.score}/${db.lastResult.total} điểm</strong></div><span class="exam-meta">${db.lastResult.wrongCount} câu sai trong lượt đó</span></section>`:'';
   main.innerHTML=`<section class="panel hero"><h2>Luyện đề, xem lỗi, làm lại câu sai</h2><p>Chọn đề hoặc module để luyện. Đáp án hiện sau khi nộp; các câu sai được lưu riêng theo từng bộ trên trình duyệt này.</p><div class="hero-pills"><span class="pill">10 đề trắc nghiệm</span><span class="pill">Lý thuyết PDF</span><span class="pill">6 module PDF · không giới hạn giờ</span><span class="pill">Lưu riêng câu sai từng bộ</span></div></section>${sessionBanner}${warning}<nav class="tabs"><button class="tab ${tab==='exams'?'active':''}" onclick="navigateTab('exams')">Luyện đề</button><button class="tab ${tab==='study'?'active':''}" onclick="navigateTab('study')">Ôn trước khi làm</button><button class="tab ${tab==='bank'?'active':''}" onclick="navigateTab('bank')">Kho câu sai (${totalMistakes})</button></nav>${body}${recent}`;
   if(!storageAvailable)showStorageWarning();
 }
 function openStudyExam(id){studyExamId=Number(id);navigateTab('study');}
 function backToStudyList(){studyExamId=null;render();window.scrollTo({top:0,behavior:'smooth'});}
+function returnToLatestResult(){if(!latestResult?.details&&db.lastResult?.details)latestResult=db.lastResult;if(!latestResult?.details)return;view='result';render();window.scrollTo({top:0,behavior:'smooth'});}
 function updateProgressUI(){
   const s=db.session;if(!s)return;
   const answered=Object.keys(s.answers).length;const total=s.questionIds.length;
@@ -1612,7 +1616,7 @@ function submitQuiz(force){
  const attempted=new Set(s.questionIds);const bank=new Set(mistakeIds(s.examId).filter(n=>!attempted.has(n)));for(const n of wrong)bank.add(n);db.mistakes[s.examId]=[...bank].sort((a,b)=>a-b);
  if(s.mode==='exam'){db.attempts[s.examId]=(db.attempts[s.examId]||0)+1;db.best[s.examId]=Math.max(db.best[s.examId]??0,score);}
  const result={examId:s.examId,mode:s.mode,score,total:details.length,wrongCount:wrong.length,completedAt:new Date().toISOString(),details,remainingMistakes:db.mistakes[s.examId].length};
- db.lastResult={examId:result.examId,score,total:result.total,wrongCount:result.wrongCount,completedAt:result.completedAt};db.session=null;saveDb();if(timerHandle){clearInterval(timerHandle);timerHandle=null;}latestResult=result;view='result';render();window.scrollTo({top:0,behavior:'smooth'});
+ db.lastResult=result;db.session=null;saveDb();if(timerHandle){clearInterval(timerHandle);timerHandle=null;}latestResult=result;view='result';render();window.scrollTo({top:0,behavior:'smooth'});
 }
 function renderResult(r){
   const exam=examById(r.examId);const percent=Math.round(r.score/r.total*100);
