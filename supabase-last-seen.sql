@@ -1,6 +1,6 @@
 -- Run once in the existing Supabase project to record recent activity by sync code.
 alter table app_private.study_progress
-  add column if not exists last_seen_at timestamptz;
+  add column last_seen_at timestamptz;
 
 create or replace function public.touch_study_seen(p_code text)
 returns timestamptz
