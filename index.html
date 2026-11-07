@@ -23,7 +23,7 @@
 <div class="shell">
 <header class="topbar">
   <div class="brand"><img class="brand-mark" src="assets/dung-song-ngu-32.svg" alt="Logo DŨNG: cá koi song ngư"><div><p class="brand-owner">DŨNG</p><h1>Ôn thi CNTT cơ bản</h1><p>10 đề trắc nghiệm, bài lý thuyết PDF và 6 module ôn tập</p></div></div>
-  <div class="top-actions"><span class="storage-status" id="storageStatus">Tự lưu trong trình duyệt</span><button class="btn secondary small" onclick="exportBackup()">Tải sao lưu</button><button class="btn secondary small" onclick="document.getElementById('importFile').click()">Khôi phục</button><input id="importFile" class="file-input" type="file" accept="application/json"></div>
+  <div class="top-actions"><span class="storage-status" id="storageStatus">Tự lưu trong trình duyệt</span></div>
 </header>
 <main id="main"></main>
 <div class="source-note">Các câu hỏi và lựa chọn được trích từ PDF bạn cung cấp. Tiến độ và câu sai lưu trên trình duyệt này.</div>
@@ -1519,7 +1519,7 @@ function renderHome(tab='exams'){
   homeTab=tab;
   const totalMistakes=Object.values(db.mistakes).reduce((s,a)=>s+(a||[]).length,0);
   const sessionBanner=db.session?`<section class="notice warning" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span><strong>Bài đang lưu:</strong> ${esc(examById(db.session.examId)?.title||'Đề')} · ${db.session.mode==='review'?'ôn câu sai':'thi thử'} · ${countAnswered()}/${db.session.questionIds.length} câu đã chọn</span><span style="display:flex;gap:8px"><button class="btn small" onclick="resumeSession()">Tiếp tục</button><button class="btn danger small" onclick="discardSession()">Bỏ bài</button></span></section>`:'';
-  const warning=`<div id="storageWarning" class="notice error hidden">Trình duyệt đang chặn lưu dữ liệu. Hãy tải sao lưu định kỳ hoặc mở file bằng Chrome/Edge bình thường.</div>`;
+  const warning=`<div id="storageWarning" class="notice error hidden">Trình duyệt đang chặn lưu dữ liệu. Tiến độ và câu sai có thể không được giữ lại; hãy cho phép trang lưu dữ liệu và mở bằng Chrome hoặc Edge.</div>`;
   let body='';
   if(tab==='exams'){
     const cards=EXAMS.map((e,i)=>{
@@ -1624,11 +1624,7 @@ function renderResult(r){
   const reviewSection=r.details.length?`<section class="review-results"><div class="section-head"><div><h2>Đối chiếu câu trả lời</h2>${exam.showExplanations===false?'':'<p>Bấm “Giải thích câu hỏi” ở câu bạn muốn xem lời giải ngắn.</p>'}</div></div>${questionHtml}</section>`:`<section class="notice">Chi tiết từng câu của lượt nộp cũ chưa được lưu; các lượt nộp mới sẽ lưu đủ để xem lại phần đối chiếu.</section>`;
   main.innerHTML=`<section class="panel result-hero"><div class="score-ring"><strong>${r.score}</strong><span>trên ${r.total}</span></div><h2>${r.mode==='review'?'Kết quả ôn câu sai':'Đã nộp bài'}</h2><p><strong>${esc(exam.title)}</strong> · ${percent}% đúng · ${r.wrongCount} câu sai/chưa trả lời</p><p>${r.remainingMistakes?`Còn ${r.remainingMistakes} câu trong kho để làm lại.`:'Kho câu sai của đề này đã trống.'}</p><div class="result-actions"><button class="btn secondary" onclick="startQuiz(${r.examId})">Làm lại toàn đề</button><button class="btn" ${r.remainingMistakes?'':'disabled'} onclick="startReview(${r.examId})">Làm lại câu sai (${r.remainingMistakes})</button><button class="btn ghost" onclick="navigateTab('exams')">Về danh sách đề</button><button class="btn ghost" onclick="navigateTab('bank')">Mở kho câu sai (${r.remainingMistakes})</button></div></section>${reviewSection}`;
 }
-function exportBackup(){
- const payload={app:'cntt-basic-practice',version:1,exportedAt:new Date().toISOString(),data:db};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sao-luu-on-thi-cntt-co-ban.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
-document.getElementById('importFile').addEventListener('change',async ev=>{const file=ev.target.files?.[0];if(!file)return;try{const x=JSON.parse(await file.text());if(x.app!=='cntt-basic-practice'||!x.data||x.version!==1)throw new Error('Bản sao lưu không đúng định dạng.');if(!confirm('Khôi phục sẽ thay dữ liệu ôn tập hiện tại. Tiếp tục?'))return;db={...emptyDb(),...x.data};saveDb();view='home';latestResult=null;render();alert('Đã khôi phục dữ liệu.');}catch(err){alert(err.message||'Không đọc được file sao lưu.');}finally{ev.target.value='';}});
-window.startQuiz=startQuiz;window.startReview=startReview;window.resumeSession=resumeSession;window.leaveSession=leaveSession;window.discardSession=discardSession;window.navigateTab=navigateTab;window.chooseAnswer=chooseAnswer;window.jumpTo=jumpTo;window.submitQuiz=submitQuiz;window.exportBackup=exportBackup;
+window.startQuiz=startQuiz;window.startReview=startReview;window.resumeSession=resumeSession;window.leaveSession=leaveSession;window.discardSession=discardSession;window.navigateTab=navigateTab;window.chooseAnswer=chooseAnswer;window.jumpTo=jumpTo;window.submitQuiz=submitQuiz;
 if(db.session)view='exam';
 render();
 </script>
