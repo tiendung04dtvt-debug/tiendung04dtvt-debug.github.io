@@ -39,6 +39,7 @@ const EXAMS=JSON.parse(document.getElementById('quiz-data').textContent);
 const STORE_KEY='cntt-basic-practice-v1';
 const SYNC_CODE_KEY='cntt-study-code-v1';
 const SYNC_UPDATED_KEY='cntt-study-updated-v1';
+const RESULT_VIEW_KEY='cntt-result-view-v1';
 const SUPABASE_URL='https://peubnwmfyoyfdukrinfg.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_PqaGyzysVmMFIvvjtE4M_Q_hXdxg4_4';
 let storageAvailable=true;
@@ -1535,14 +1536,16 @@ function toggleExplanation(n){
 function mistakeIds(id){return [...new Set((db.mistakes[id]||[]).map(Number))].sort((a,b)=>a-b);}
 function shuffledQuestionIds(exam){const ids=exam.questions.map(q=>q.n);for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]];}return ids;}
 function countAnswered(){return db.session?Object.keys(db.session.answers||{}).length:0;}
-function navigateTab(tab){if(view==='exam')saveCurrentQuestion();homeTab=tab;view='home';render();window.scrollTo({top:0,behavior:'smooth'});}
+function rememberResultView(active){try{if(active)sessionStorage.setItem(RESULT_VIEW_KEY,'1');else sessionStorage.removeItem(RESULT_VIEW_KEY);}catch(e){}}
+function hasRememberedResultView(){try{return sessionStorage.getItem(RESULT_VIEW_KEY)==='1';}catch(e){return false;}}
+function navigateTab(tab){if(view==='exam')saveCurrentQuestion();rememberResultView(false);homeTab=tab;view='home';render();window.scrollTo({top:0,behavior:'smooth'});}
 function startQuiz(id,shuffle=false){
   id=Number(id);
   if(db.session){
     if(db.session.examId===id){resumeSession();return;}
     alert('Bạn đang có một bài làm được lưu. Hãy tiếp tục hoặc bỏ bài đang làm trước.');return;
   }
-  const exam=examById(id);if(!exam)return;
+  const exam=examById(id);if(!exam)return;rememberResultView(false);
   const timeLimit=exam.timeLimit===undefined?30:exam.timeLimit;const questionIds=shuffle?shuffledQuestionIds(exam):exam.questions.map(q=>q.n);db.session={examId:id,mode:'exam',shuffled:Boolean(shuffle),questionIds,currentQuestion:questionIds[0]??null,answers:{},deadline:timeLimit>0?Date.now()+timeLimit*60*1000:null};
   saveDb();view='exam';render();window.scrollTo(0,0);
 }
@@ -1553,7 +1556,7 @@ function startReview(id){
     if(db.session.examId===id&&db.session.mode==='review'){view='exam';render();return;}
     alert('Bạn đang có một bài làm được lưu. Hãy tiếp tục hoặc bỏ bài đang làm trước.');return;
   }
-  db.session={examId:id,mode:'review',questionIds:ids,currentQuestion:ids[0]??null,answers:{},deadline:null};
+  rememberResultView(false);db.session={examId:id,mode:'review',questionIds:ids,currentQuestion:ids[0]??null,answers:{},deadline:null};
   saveDb();view='exam';render();window.scrollTo(0,0);
 }
 function resumeSession(){view='exam';render();}
@@ -1616,7 +1619,7 @@ function renderHome(tab='exams'){
 }
 function openStudyExam(id){studyExamId=Number(id);navigateTab('study');}
 function backToStudyList(){studyExamId=null;render();window.scrollTo({top:0,behavior:'smooth'});}
-function returnToLatestResult(){const saved=latestResult?.details?latestResult:db.lastResult;if(!saved)return;latestResult={...saved,mode:saved.mode||'exam',details:saved.details||[],remainingMistakes:saved.remainingMistakes??mistakeIds(saved.examId).length};view='result';render();window.scrollTo({top:0,behavior:'smooth'});}
+function returnToLatestResult(){const saved=latestResult?.details?latestResult:db.lastResult;if(!saved)return;latestResult={...saved,mode:saved.mode||'exam',details:saved.details||[],remainingMistakes:saved.remainingMistakes??mistakeIds(saved.examId).length};rememberResultView(true);view='result';render();window.scrollTo({top:0,behavior:'smooth'});}
 function updateProgressUI(){
   const s=db.session;if(!s)return;
   const answered=Object.keys(s.answers).length;const total=s.questionIds.length;
@@ -1668,7 +1671,7 @@ function submitQuiz(force){
  const attempted=new Set(s.questionIds);const bank=new Set(mistakeIds(s.examId).filter(n=>!attempted.has(n)));for(const n of wrong)bank.add(n);db.mistakes[s.examId]=[...bank].sort((a,b)=>a-b);
  if(s.mode==='exam'){db.attempts[s.examId]=(db.attempts[s.examId]||0)+1;db.best[s.examId]=Math.max(db.best[s.examId]??0,score);}
  const result={examId:s.examId,mode:s.mode,score,total:details.length,wrongCount:wrong.length,completedAt:new Date().toISOString(),details,remainingMistakes:db.mistakes[s.examId].length};
- db.lastResult=result;db.session=null;saveDb();if(timerHandle){clearInterval(timerHandle);timerHandle=null;}latestResult=result;view='result';render();window.scrollTo({top:0,behavior:'smooth'});
+ db.lastResult=result;db.session=null;saveDb();if(timerHandle){clearInterval(timerHandle);timerHandle=null;}latestResult=result;rememberResultView(true);view='result';render();window.scrollTo({top:0,behavior:'smooth'});
 }
 function renderResult(r){
   const exam=examById(r.examId);const percent=Math.round(r.score/r.total*100);
@@ -1682,7 +1685,7 @@ function renderResult(r){
   main.innerHTML=`<section class="panel result-hero ${showResultSeal?'has-result-seal':''}"><div class="result-overview"><div class="result-score-wrap">${showResultSeal?resultSeal:`<div class="result-score-text">${r.score}<span> / ${r.total} câu</span></div>`}</div><div class="result-copy"><h2>${esc(exam.title)}</h2><p class="result-state">${r.mode==='review'?'Đã hoàn tất ôn tập':'Đã nộp bài'} · ${percent}% đúng</p><div class="result-counts"><div class="result-count correct"><strong>${r.score}</strong><span>câu đúng</span></div><div class="result-count incorrect"><strong>${incorrectCount}</strong><span>câu sai</span></div><div class="result-count unanswered"><strong>${unansweredCount}</strong><span>chưa trả lời</span></div></div></div></div><p class="result-reminder">${r.remainingMistakes?`Còn ${r.remainingMistakes} câu trong kho để làm lại.`:'Kho câu sai của đề này đã trống.'}</p><div class="result-actions"><button class="btn secondary" onclick="startQuiz(${r.examId})">Làm lại toàn đề</button><button class="btn" ${r.remainingMistakes?'':'disabled'} onclick="startReview(${r.examId})">Làm lại câu sai (${r.remainingMistakes})</button><button class="btn ghost" onclick="navigateTab('exams')">Về danh sách đề</button><button class="btn ghost" onclick="navigateTab('bank')">Mở kho câu sai (${r.remainingMistakes})</button></div></section>${reviewSection}`;
 }
 window.startQuiz=startQuiz;window.startReview=startReview;window.resumeSession=resumeSession;window.leaveSession=leaveSession;window.discardSession=discardSession;window.navigateTab=navigateTab;window.chooseAnswer=chooseAnswer;window.jumpTo=jumpTo;window.submitQuiz=submitQuiz;window.copySyncCode=copySyncCode;window.restoreSyncCode=restoreSyncCode;
-if(db.session)view='exam';
+if(db.session)view='exam';else if(latestResult&&hasRememberedResultView())view='result';
 render();
 updateSyncCodeButton();initializeCloudSync();
 </script>
