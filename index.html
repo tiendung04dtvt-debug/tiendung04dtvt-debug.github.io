@@ -114,11 +114,11 @@
 </header>
 <aside class="sync-hint">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
-    <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:7px;background:#e8f7ee;color:#137b52;font-size:12px;font-weight:900;letter-spacing:0.04em;">🔒 BẢO MẬT &amp; QUYỀN RIÊNG TƯ TUYỆT ĐỐI</span>
-    <strong style="color:#14223a;font-size:13px;">CHỈ LƯU TIẾN ĐỘ TRÊN TRÌNH DUYỆT CỦA BẠN</strong>
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:7px;background:#edf3ff;color:#2459d3;font-size:12px;font-weight:900;letter-spacing:0.04em;">LƯU VÀ ĐỒNG BỘ TIẾN ĐỘ</span>
+    <strong style="color:#14223a;font-size:13px;">Dùng mã cá nhân để tiếp tục học trên thiết bị khác</strong>
   </div>
-  <p style="margin:0 0 6px;color:#2e3e54;font-size:13px;line-height:1.5;">Toàn bộ câu trả lời, điểm số và danh sách câu sai <strong>chỉ lưu trực tiếp trên thiết bị của bạn</strong>. Trang web <strong>hoàn toàn ẩn danh</strong> — người tạo website <strong>không thể lấy, thu thập hay xem bất kỳ dữ liệu nào từ bạn</strong> (không yêu cầu đăng ký/đăng nhập, không thu thập email, họ tên, số điện thoại hay IP).</p>
-  <p style="margin:0;color:#61718b;font-size:12px;line-height:1.5;"><strong>Mã cá nhân:</strong> Dùng để lưu tiến độ riêng của bạn. Bấm vào mã để sao chép; trên thiết bị khác, chọn <strong>Nhập mã thiết bị khác</strong> để tiếp tục học đồng bộ.</p>
+  <p style="margin:0 0 6px;color:#2e3e54;font-size:13px;line-height:1.5;">Câu trả lời, điểm số và câu sai được lưu trên trình duyệt và đồng bộ lên Supabase theo mã cá nhân. Người quản lý dự án có thể xem dữ liệu đồng bộ trong Supabase. Ứng dụng cũng lưu thời điểm hoạt động gần nhất và nhãn thiết bị/trình duyệt; ứng dụng không yêu cầu email hay họ tên.</p>
+  <p style="margin:0;color:#61718b;font-size:12px;line-height:1.5;"><strong>Giữ kín mã cá nhân:</strong> Ai có mã có thể truy cập và thay đổi tiến độ gắn với mã đó. Bấm vào mã để sao chép; trên thiết bị khác, chọn <strong>Nhập mã thiết bị khác</strong> để đồng bộ.</p>
 </aside>
 <main id="main"></main>
 <div class="source-note">Các câu hỏi và lựa chọn được trích từ PDF bạn cung cấp. Tiến độ tự lưu và đồng bộ bằng mã 6 số.</div>
@@ -222,7 +222,7 @@ async function initializeCloudSync(){
     }
     const localTime=Number(localStorage.getItem(SYNC_UPDATED_KEY))||0;const remoteTime=Number(remote.payload.deviceUpdatedAt)||Date.parse(remote.updated_at)||0;
     if(localTime>remoteTime){cloudReady=true;updateSyncCodeButton();await flushCloudSync();startLastSeenTracking();return;}
-    db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(remoteTime||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;render();setSyncStatus('Đã đồng bộ');cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel()}).catch(()=>{});cloudReady=true;updateSyncCodeButton();startLastSeenTracking();
+    db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(remoteTime||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;if(view!=='exam')render();setSyncStatus('Đã đồng bộ');cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel()}).catch(()=>{});cloudReady=true;updateSyncCodeButton();startLastSeenTracking();
   }catch(e){console.warn('Study progress initialization failed:',e);cloudReady=true;updateSyncCodeButton();setSyncStatus('Chưa kết nối · lưu trên thiết bị',e.message||String(e));startLastSeenTracking();}
 }
 async function copySyncCode(){if(!syncCode)return;try{await navigator.clipboard.writeText(syncCode);setSyncStatus('Đã sao chép mã');}catch(e){prompt('Mã đồng bộ của bạn:',syncCode);}}
@@ -1908,22 +1908,48 @@ function updateProgressUI(){
   for(const n of s.questionIds){const b=document.getElementById(`jump-${n}`);if(b)b.classList.toggle('answered',s.answers[n]!==undefined);}
 }
 let currentQuestionSaveTimer=null;let appViewSaveTimer=null;
+function centerJumpButton(n,behavior='smooth'){
+  const nav=document.querySelector('.jump-nav');
+  const btn=document.getElementById(`jump-${n}`);
+  if(nav&&btn){
+    const targetLeft=btn.offsetLeft-(nav.clientWidth-btn.clientWidth)/2;
+    nav.scrollTo({left:targetLeft,behavior});
+  }
+}
 function saveCurrentQuestion(){
   if(view!=='exam'||!db.session)return;
   const cards=[...document.querySelectorAll('.question-card')];if(!cards.length)return;
-  const marker=window.innerHeight*0.28;
+  const marker=window.innerHeight*0.32;
   let active=cards.find(el=>{const r=el.getBoundingClientRect();return r.top<=marker&&r.bottom>=marker;});
   if(!active)active=cards.reduce((best,el)=>Math.abs(el.getBoundingClientRect().top-marker)<Math.abs(best.getBoundingClientRect().top-marker)?el:best,cards[0]);
   const n=Number(active.id.replace('question-',''));
-  if(n&&db.session.questionIds.includes(n)){document.querySelectorAll('.jump-nav button.current').forEach(b=>b.classList.remove('current'));const jBtn=document.getElementById(`jump-${n}`);if(jBtn){jBtn.classList.add('current');jBtn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});}if(db.session.currentQuestion!==n){db.session.currentQuestion=n;saveDb();}}
+  if(n&&db.session.questionIds.includes(n)){
+    const currentBtn=document.querySelector('.jump-nav button.current');
+    const targetBtn=document.getElementById(`jump-${n}`);
+    if(targetBtn&&currentBtn!==targetBtn){
+      if(currentBtn)currentBtn.classList.remove('current');
+      targetBtn.classList.add('current');
+      centerJumpButton(n,'smooth');
+    }
+    if(db.session.currentQuestion!==n){
+      db.session.currentQuestion=n;
+      try{localStorage.setItem(STORE_KEY,JSON.stringify(db));}catch(e){}
+    }
+  }
 }
 function restoreCurrentQuestion(){
   const s=db.session;if(!s)return;
   const lastAnswered=[...s.questionIds].reverse().find(id=>s.answers?.[id]!==undefined);
   const n=s.currentQuestion&&s.questionIds.includes(Number(s.currentQuestion))?Number(s.currentQuestion):lastAnswered||s.questionIds[0];
-  if(n)requestAnimationFrame(()=>document.getElementById(`question-${n}`)?.scrollIntoView({behavior:'auto',block:'start'}));
+  if(n&&n!==s.questionIds[0])requestAnimationFrame(()=>document.getElementById(`question-${n}`)?.scrollIntoView({behavior:'auto',block:'start'}));
+  const jBtn=document.getElementById(`jump-${n}`);
+  if(jBtn){
+    document.querySelectorAll('.jump-nav button.current').forEach(b=>b.classList.remove('current'));
+    jBtn.classList.add('current');
+    requestAnimationFrame(()=>centerJumpButton(n,'auto'));
+  }
 }
-window.addEventListener('scroll',()=>{if(view==='exam'&&db.session){if(currentQuestionSaveTimer)clearTimeout(currentQuestionSaveTimer);currentQuestionSaveTimer=setTimeout(saveCurrentQuestion,180);}if(appViewSaveTimer)clearTimeout(appViewSaveTimer);appViewSaveTimer=setTimeout(saveAppViewState,180);},{passive:true});
+window.addEventListener('scroll',()=>{if(view==='exam'&&db.session){if(currentQuestionSaveTimer)clearTimeout(currentQuestionSaveTimer);currentQuestionSaveTimer=setTimeout(saveCurrentQuestion,220);}if(appViewSaveTimer)clearTimeout(appViewSaveTimer);appViewSaveTimer=setTimeout(saveAppViewState,220);},{passive:true});
 window.addEventListener('pagehide',()=>{saveCurrentQuestion();saveAppViewState();});
 function renderExam(){
   const s=db.session;const exam=examById(s.examId);if(!exam){db.session=null;saveDb();view='home';render();return;}
@@ -1938,7 +1964,7 @@ function renderExam(){
   restoreCurrentQuestion();if(isTimed)startTimer();
 }
 function chooseAnswer(n,i){if(!db.session)return;db.session.answers[n]=i;db.session.currentQuestion=Number(n);saveDb();const card=document.getElementById(`question-${n}`);if(card){card.querySelectorAll('.choice').forEach((el,k)=>el.classList.toggle('selected',k===i));}const f=document.getElementById('answeredFooter');if(f)f.textContent=`${countAnswered()}/${db.session.questionIds.length}`;updateProgressUI();}
-function jumpTo(n){if(db.session){db.session.currentQuestion=Number(n);saveDb();}document.getElementById(`question-${n}`)?.scrollIntoView({behavior:'smooth',block:'start'});document.querySelectorAll('.jump-nav button').forEach(b=>b.classList.remove('current'));const jBtn=document.getElementById(`jump-${n}`);if(jBtn){jBtn.classList.add('current');jBtn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});}}
+function jumpTo(n){if(db.session){db.session.currentQuestion=Number(n);saveDb();}document.getElementById(`question-${n}`)?.scrollIntoView({behavior:'smooth',block:'start'});document.querySelectorAll('.jump-nav button.current').forEach(b=>b.classList.remove('current'));const jBtn=document.getElementById(`jump-${n}`);if(jBtn){jBtn.classList.add('current');centerJumpButton(n,'smooth');}}
 function startTimer(){
  const el=document.getElementById('timer');const s=db.session;if(!el||!s)return;
  const tick=()=>{if(!db.session||!db.session.deadline)return;const remaining=Math.max(0,Math.ceil((db.session.deadline-Date.now())/1000));const m=String(Math.floor(remaining/60)).padStart(2,'0');const sec=String(remaining%60).padStart(2,'0');el.textContent=`${m}:${sec}`;el.classList.toggle('low',remaining<=300);if(remaining<=0){clearInterval(timerHandle);timerHandle=null;submitQuiz(true);}};
