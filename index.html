@@ -206,7 +206,7 @@ function getDeviceLabel(){
   const browser=/Edg\//i.test(ua)?'Edge':/OPR\//i.test(ua)?'Opera':/Firefox\//i.test(ua)?'Firefox':/Chrome\//i.test(ua)&&!/Edg\//i.test(ua)?'Chrome':/Safari\//i.test(ua)&&!/Chrome\//i.test(ua)?'Safari':'Trình duyệt khác';
   return `${device} · ${browser}`;
 }
-async function updateLastSeen(){if(!cloudReady||!syncCode||document.visibilityState==='hidden')return;try{await cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel()});}catch(e){}}
+async function updateLastSeen(){if(!cloudReady||!syncCode)return;try{await cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel(),p_tab_visibility:document.visibilityState==='hidden'?'Mở nền':'Đang xem'});}catch(e){}}
 function startLastSeenTracking(){if(lastSeenTimer)clearInterval(lastSeenTimer);updateLastSeen();lastSeenTimer=setInterval(updateLastSeen,30*1000);}
 function queueCloudSync(){if(!cloudReady||!syncCode)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(flushCloudSync,700);}
 async function flushCloudSync(){
