@@ -124,8 +124,8 @@ function getDeviceLabel(){
   const browser=/Edg\//i.test(ua)?'Edge':/OPR\//i.test(ua)?'Opera':/Firefox\//i.test(ua)?'Firefox':/Chrome\//i.test(ua)&&!/Edg\//i.test(ua)?'Chrome':/Safari\//i.test(ua)&&!/Chrome\//i.test(ua)?'Safari':'Trình duyệt khác';
   return `${device} · ${browser}`;
 }
-async function updateLastSeen(){return;}
-function startLastSeenTracking(){return;}
+async function updateLastSeen(){if(!cloudReady||!syncCode||document.visibilityState==='hidden')return;try{await cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel()});}catch(e){}}
+function startLastSeenTracking(){if(lastSeenTimer)clearInterval(lastSeenTimer);updateLastSeen();lastSeenTimer=setInterval(updateLastSeen,30*1000);}
 function queueCloudSync(){if(!cloudReady||!syncCode)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(flushCloudSync,700);}
 async function flushCloudSync(){
   if(!cloudReady||!syncCode)return;if(cloudSyncRunning){cloudSyncQueued=true;return;}cloudSyncRunning=true;
@@ -139,7 +139,7 @@ async function flushCloudSync(){
       ok=await cloudRpc('save_study_data',{p_code:syncCode,p_payload:{db,deviceUpdatedAt:timestamp}});
       if(ok!==true)throw new Error('Supabase did not save progress under the replacement code.');
     }
-    setSyncStatus('Đã đồng bộ');
+    setSyncStatus('Đã đồng bộ');cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel()}).catch(()=>{});
   }
   catch(e){console.warn('Study progress sync failed:',e);setSyncStatus('Chưa đồng bộ · vẫn lưu trên thiết bị',e.message||String(e));}
   finally{cloudSyncRunning=false;if(cloudSyncQueued){cloudSyncQueued=false;queueCloudSync();}}
@@ -162,7 +162,7 @@ async function initializeCloudSync(){
     }
     const localTime=Number(localStorage.getItem(SYNC_UPDATED_KEY))||0;const remoteTime=Number(remote.payload.deviceUpdatedAt)||Date.parse(remote.updated_at)||0;
     if(localTime>remoteTime){cloudReady=true;updateSyncCodeButton();await flushCloudSync();startLastSeenTracking();return;}
-    db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(remoteTime||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;render();setSyncStatus('Đã đồng bộ');cloudReady=true;updateSyncCodeButton();startLastSeenTracking();
+    db=normalizeCloudDb(remote.payload.db);localStorage.setItem(STORE_KEY,JSON.stringify(db));localStorage.setItem(SYNC_UPDATED_KEY,String(remoteTime||Date.now()));latestResult=db.lastResult?.details?db.lastResult:null;render();setSyncStatus('Đã đồng bộ');cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel()}).catch(()=>{});cloudReady=true;updateSyncCodeButton();startLastSeenTracking();
   }catch(e){console.warn('Study progress initialization failed:',e);cloudReady=true;updateSyncCodeButton();setSyncStatus('Chưa kết nối · lưu trên thiết bị',e.message||String(e));startLastSeenTracking();}
 }
 async function copySyncCode(){if(!syncCode)return;try{await navigator.clipboard.writeText(syncCode);setSyncStatus('Đã sao chép mã');}catch(e){prompt('Mã đồng bộ của bạn:',syncCode);}}
