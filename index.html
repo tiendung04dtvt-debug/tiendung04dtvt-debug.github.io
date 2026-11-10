@@ -28,7 +28,14 @@
   <div class="brand"><img class="brand-mark" src="assets/dung-song-ngu-32.svg" alt="Logo DŨNG: cá koi song ngư"><div><p class="brand-owner">DŨNG</p><h1>Ôn thi CNTT cơ bản</h1><p>10 đề trắc nghiệm, bài lý thuyết PDF và 6 module ôn tập</p></div></div>
   <div class="top-actions"><span class="storage-status" id="storageStatus">Đang kết nối…</span><button class="btn secondary small" id="syncCodeButton" disabled onclick="copySyncCode()">Mã: …</button><button class="btn secondary small" id="restoreSyncCodeButton" disabled onclick="restoreSyncCode()">Nhập mã thiết bị khác</button></div>
 </header>
-<aside class="sync-hint"><strong>Mã cá nhân:</strong> mã này nhận diện nơi lưu tiến độ và câu sai của bạn. Bấm vào mã để sao chép; trên thiết bị khác, chọn <strong>Nhập mã thiết bị khác</strong>. Dùng cùng một mã trên các thiết bị của bạn để tiếp tục học. Khi trang đang mở và hiển thị — kể cả lúc đọc phần ôn trước khi làm — web gửi tín hiệu hoạt động định kỳ và lưu nhãn thiết bị/trình duyệt chung để hiển thị trạng thái gần đúng; IP và Gmail không được lưu trong hồ sơ tiến độ.</aside>
+<aside class="sync-hint">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:7px;background:#e8f7ee;color:#137b52;font-size:12px;font-weight:900;letter-spacing:0.04em;">🔒 BẢO MẬT &amp; QUYỀN RIÊNG TƯ TUYỆT ĐỐI</span>
+    <strong style="color:#14223a;font-size:13px;">CHỈ LƯU TIẾN ĐỘ TRÊN TRÌNH DUYỆT CỦA BẠN</strong>
+  </div>
+  <p style="margin:0 0 6px;color:#2e3e54;font-size:13px;line-height:1.5;">Toàn bộ câu trả lời, điểm số và danh sách câu sai <strong>chỉ lưu trực tiếp trên thiết bị của bạn</strong>. Trang web <strong>hoàn toàn ẩn danh</strong> — người tạo website <strong>không thể lấy, thu thập hay xem bất kỳ dữ liệu nào từ bạn</strong> (không yêu cầu đăng ký/đăng nhập, không thu thập email, họ tên, số điện thoại hay IP).</p>
+  <p style="margin:0;color:#61718b;font-size:12px;line-height:1.5;"><strong>Mã cá nhân:</strong> Dùng để lưu tiến độ riêng của bạn. Bấm vào mã để sao chép; trên thiết bị khác, chọn <strong>Nhập mã thiết bị khác</strong> để tiếp tục học đồng bộ.</p>
+</aside>
 <main id="main"></main>
 <div class="source-note">Các câu hỏi và lựa chọn được trích từ PDF bạn cung cấp. Tiến độ tự lưu và đồng bộ bằng mã 6 số.</div>
 </div>
@@ -93,8 +100,8 @@ function getDeviceLabel(){
   const browser=/Edg\//i.test(ua)?'Edge':/OPR\//i.test(ua)?'Opera':/Firefox\//i.test(ua)?'Firefox':/Chrome\//i.test(ua)&&!/Edg\//i.test(ua)?'Chrome':/Safari\//i.test(ua)&&!/Chrome\//i.test(ua)?'Safari':'Trình duyệt khác';
   return `${device} · ${browser}`;
 }
-async function updateLastSeen(){if(!cloudReady||!syncCode||document.visibilityState==='hidden')return;try{await cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel()});}catch(e){}}
-function startLastSeenTracking(){if(lastSeenTimer)return;updateLastSeen();lastSeenTimer=setInterval(updateLastSeen,30*1000);}
+async function updateLastSeen(){return;}
+function startLastSeenTracking(){return;}
 function queueCloudSync(){if(!cloudReady||!syncCode)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(flushCloudSync,700);}
 async function flushCloudSync(){
   if(!cloudReady||!syncCode)return;if(cloudSyncRunning){cloudSyncQueued=true;return;}cloudSyncRunning=true;
