@@ -47,6 +47,12 @@
   .q-title{gap:10px}
   .q-number{flex:0 0 32px;height:32px;border-radius:9px;font-size:13px}
   .q-prompt{font-size:16px;line-height:1.55;font-weight:700;margin:1px 0 14px}
+  .quiz-header .quiz-mobile-tools{display:flex;align-items:center;justify-content:flex-end;gap:7px;margin-top:8px;color:var(--muted);font-size:12px}
+  .quiz-mobile-tools button{min-width:42px;min-height:40px;padding:6px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--blue);font-weight:800}
+  .quiz-mobile-tools button:disabled{opacity:.4}
+  .quiz-mobile-tools output{min-width:42px;text-align:center;font-variant-numeric:tabular-nums}
+  .q-prompt{font-size:calc(16px * var(--quiz-font-scale, 1))}
+  .choice-text{font-size:calc(14.5px * var(--quiz-font-scale, 1))}
   .choices{margin-left:0;gap:9px}
   .choice{padding:13px 14px;min-height:48px;border-radius:12px}
   .choice:active{transform:scale(0.99);background:#f1f5fd}
@@ -81,7 +87,7 @@
 .result-options{display:grid;gap:8px;margin-top:14px}.result-option{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#52647d;font-size:14px;line-height:1.45}.result-option .result-radio{flex:0 0 20px;width:20px;height:20px;border:2px solid #aab6c6;border-radius:50%;display:grid;place-items:center;margin-top:1px;color:transparent;font-size:13px;font-weight:900}.result-option.correct{background:#e8f7ee;border-color:#b6e2c5;color:#176c3b}.result-option.correct .result-radio{border-color:#2b9a55;color:#2b9a55}.result-option.wrong-selected{background:#fff0f0;border-color:#edbfc2;color:#a12c35}.result-option.wrong-selected .result-radio{border-color:#c84850;color:#c84850}.result-option .result-flag{margin-left:auto;white-space:nowrap;font-size:11px;font-weight:800;color:inherit;padding-left:8px}.result-option .result-text{white-space:pre-wrap}
 
 .study-questions{display:grid;gap:12px}.study-question{padding:18px 20px;scroll-margin-top:20px}.study-question h3{display:flex;gap:11px;align-items:flex-start;margin:0;font-size:16px;line-height:1.5}.study-number{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-size:13px;font-weight:850}.study-explanation{margin-top:12px;padding:13px 15px;background:#f4f7fb;border:1px solid #e5ebf3;border-radius:11px;color:#34445a}.study-explanation strong{color:var(--blue);font-size:13px}.study-explanation p{margin:4px 0 0;white-space:pre-line}.study-explanation small{display:block;margin-top:8px;color:var(--muted)}@media(max-width:760px){.study-question{padding:15px}.study-question h3{font-size:15px}.study-question .result-option{padding:9px 10px;font-size:13px}.study-question .result-flag{font-size:10px}}
-.question-nav-actions{display:none}.quiz-footer-main{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:1}
+.question-nav-actions{display:none}.quiz-mobile-tools{display:none}.quiz-footer-main{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:1}
 .bank-list{max-height:min(42vh,360px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:8px}.bank-actions{margin:12px 0 0}.bank-actions .btn{width:100%;min-height:42px}.result-actions .btn{min-height:42px}.bank-latest{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;padding:17px 20px;border-left:4px solid var(--blue)}.bank-latest h3{margin:0;font-size:18px}.bank-latest p{margin:5px 0 0;color:var(--muted);font-size:13px}.bank-latest-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}.bank-latest-actions .btn{min-height:42px}
 @media(max-width:760px){.bank-latest{align-items:stretch;flex-direction:column;padding:15px}.bank-latest-actions{flex-direction:column}.bank-latest-actions .btn{width:100%}}
 .sync-hint{margin:-13px 0 22px;padding:9px 13px;border:1px solid #dbe6f7;border-radius:11px;background:#fff;color:var(--muted);font-size:12px}.sync-hint strong{color:var(--ink)}
@@ -138,6 +144,8 @@ const STORE_KEY='cntt-basic-practice-v1';
 const SYNC_CODE_KEY='cntt-study-code-v1';
 const SYNC_UPDATED_KEY='cntt-study-updated-v1';
 const APP_VIEW_KEY='cntt-app-view-v1';
+const QUIZ_FONT_SCALE_KEY='cntt-quiz-font-scale-v1';
+let quizFontScale=1;try{const savedScale=Number(localStorage.getItem(QUIZ_FONT_SCALE_KEY));if(savedScale>=0.9&&savedScale<=1.3)quizFontScale=savedScale;}catch(e){}
 const SUPABASE_URL='https://peubnwmfyoyfdukrinfg.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_PqaGyzysVmMFIvvjtE4M_Q_hXdxg4_4';
 let storageAvailable=true;
@@ -1926,6 +1934,17 @@ function updateQuestionNavButtons(){
     next.title=next.disabled?'Không còn câu chưa trả lời tiếp theo':'';
   }
 }
+function applyQuizFontScale(){
+  document.documentElement.style.setProperty('--quiz-font-scale',String(quizFontScale));
+  const label=document.getElementById('quizFontScaleLabel');if(label)label.textContent=`${Math.round(quizFontScale*100)}%`;
+  const down=document.getElementById('quizFontDown');if(down)down.disabled=quizFontScale<=0.9;
+  const up=document.getElementById('quizFontUp');if(up)up.disabled=quizFontScale>=1.3;
+}
+function adjustQuizFont(delta){
+  quizFontScale=Math.max(0.9,Math.min(1.3,Math.round((quizFontScale+delta)*10)/10));
+  try{localStorage.setItem(QUIZ_FONT_SCALE_KEY,String(quizFontScale));}catch(e){}
+  applyQuizFontScale();
+}
 function moveQuestion(direction){
   const s=db.session;if(!s)return;
   const ids=s.questionIds;const currentIndex=Math.max(0,ids.indexOf(Number(s.currentQuestion)));
@@ -1992,7 +2011,8 @@ function renderExam(){
     const choices=q.options.map((opt,i)=>`<label class="choice ${s.answers[q.n]===i?'selected':''}"><input type="radio" name="question-${q.n}" value="${i}" ${s.answers[q.n]===i?'checked':''} onchange="chooseAnswer(${q.n},${i})"><span class="radio" aria-hidden="true"></span><span class="choice-text">${esc(opt)}</span></label>`).join('');
     return `<section class="panel question-card" id="question-${q.n}"><div class="q-title"><span class="q-number">${String(q.n).padStart(2,'0')}</span><div class="q-prompt">${esc(q.prompt)}</div></div><div class="choices">${choices}</div></section>`;
   }).join('');
-  main.innerHTML=`<div class="quiz-header"><div class="quiz-head-row"><div class="quiz-name"><button class="btn ghost small" onclick="leaveSession()">← Danh sách đề</button><h2>${esc(exam.title)} <span class="exam-meta">${s.mode==='review'?'· Ôn câu sai':'· Bài thi'}${s.mode==='exam'&&s.shuffled?' · Đã xáo trộn':''}</span></h2></div>${timerMarkup}</div><div class="quiz-status"><span id="answeredText">Đã trả lời ${answered}/${qs.length}</span><span>${qs.length} câu ${isTimed?'· 30 phút':'· không tính giờ'}</span></div><div class="quiz-progress"><span id="quizProgressFill" style="width:${Math.round(answered/qs.length*100)}%"></span></div></div><div class="jump-nav" aria-label="Đi đến câu hỏi">${nav}</div>${cards}<div class="quiz-footer"><div class="question-nav-actions"><button type="button" class="btn secondary" id="previousQuestionButton" onclick="moveQuestion(-1)" aria-label="Đi tới câu trước">← Câu trước</button><button type="button" class="btn secondary" id="nextQuestionButton" onclick="moveQuestion(1)" aria-label="Đi tới câu chưa trả lời tiếp theo">Câu tiếp →</button></div><div class="quiz-footer-main"><span>Đã chọn <strong id="answeredFooter">${answered}/${qs.length}</strong> câu</span><button class="btn" onclick="submitQuiz(false)">${s.mode==='review'?'Hoàn tất ôn tập':'Nộp bài'}</button></div></div>`;
+  main.innerHTML=`<div class="quiz-header"><div class="quiz-head-row"><div class="quiz-name"><button class="btn ghost small" onclick="leaveSession()">← Danh sách đề</button><h2>${esc(exam.title)} <span class="exam-meta">${s.mode==='review'?'· Ôn câu sai':'· Bài thi'}${s.mode==='exam'&&s.shuffled?' · Đã xáo trộn':''}</span></h2></div>${timerMarkup}</div><div class="quiz-status"><span id="answeredText">Đã trả lời ${answered}/${qs.length}</span><span>${qs.length} câu ${isTimed?'· 30 phút':'· không tính giờ'}</span></div><div class="quiz-progress"><span id="quizProgressFill" style="width:${Math.round(answered/qs.length*100)}%"></span></div><div class="quiz-mobile-tools" aria-label="Điều chỉnh cỡ chữ câu hỏi"><span>Cỡ chữ</span><button type="button" id="quizFontDown" onclick="adjustQuizFont(-0.1)" aria-label="Giảm cỡ chữ">A−</button><output id="quizFontScaleLabel">100%</output><button type="button" id="quizFontUp" onclick="adjustQuizFont(0.1)" aria-label="Tăng cỡ chữ">A+</button></div></div><div class="jump-nav" aria-label="Đi đến câu hỏi">${nav}</div>${cards}<div class="quiz-footer"><div class="question-nav-actions"><button type="button" class="btn secondary" id="previousQuestionButton" onclick="moveQuestion(-1)" aria-label="Đi tới câu trước">← Câu trước</button><button type="button" class="btn secondary" id="nextQuestionButton" onclick="moveQuestion(1)" aria-label="Đi tới câu chưa trả lời tiếp theo">Câu tiếp →</button></div><div class="quiz-footer-main"><span>Đã chọn <strong id="answeredFooter">${answered}/${qs.length}</strong> câu</span><button class="btn" onclick="submitQuiz(false)">${s.mode==='review'?'Hoàn tất ôn tập':'Nộp bài'}</button></div></div>`;
+  applyQuizFontScale();
   updateQuestionNavButtons();
   restoreCurrentQuestion();if(isTimed)startTimer();
 }
