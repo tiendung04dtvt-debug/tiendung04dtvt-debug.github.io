@@ -2046,6 +2046,17 @@ function saveWrongNote(){
   if(!pendingNote)return;
   readPendingNoteFields();
   if(pendingNote.prompt.length<3||pendingNote.options.length<2||pendingNote.options.some(option=>!option)){alert('Điền câu hỏi và tất cả lựa chọn trước khi lưu.');return;}
+  const promptKey=normalizeNoteText(pendingNote.prompt);
+  const optionKeys=pendingNote.options.map(option=>normalizeNoteText(option,true)).sort();
+  const duplicate=wrongNotes.find(note=>{
+    const sameSource=pendingNote.sourceTitle&&pendingNote.sourceQuestion&&note.sourceTitle===pendingNote.sourceTitle&&String(note.sourceQuestion)===String(pendingNote.sourceQuestion);
+    if(sameSource)return true;
+    const existingPrompt=normalizeNoteText(note.prompt||note.question||'');
+    if(!existingPrompt||existingPrompt!==promptKey)return false;
+    const existingOptions=Array.isArray(note.options)?note.options.map(option=>normalizeNoteText(option,true)).sort():[];
+    return existingOptions.length===optionKeys.length&&existingOptions.every((option,index)=>option===optionKeys[index]);
+  });
+  if(duplicate){const source=duplicate.sourceTitle&&duplicate.sourceQuestion?` (${duplicate.sourceTitle} · Câu ${duplicate.sourceQuestion})`:'';alert(`Câu này đã có trong danh sách ghi chú${source}. Không tạo thêm bản trùng.`);return;}
   if(!pendingNote.verified&&!confirm('Câu này chưa được đối chiếu với đáp án gốc. Lưu lại ở trạng thái chưa xác minh?'))return;
   const answerIndex=pendingNote.verified?Number(pendingNote.answerIndex):Number(pendingNote.manualAnswer??-1);
   if(answerIndex>=pendingNote.options.length){alert('Đáp án đúng không khớp với số lựa chọn.');return;}
