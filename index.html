@@ -263,6 +263,18 @@ function getDeviceLabel(){
   return `${device} · ${browser}`;
 }
 async function updateLastSeen(){if(!cloudReady||!syncCode)return;try{await cloudRpc('touch_study_seen',{p_code:syncCode,p_device_info:getDeviceLabel(),p_tab_visibility:document.visibilityState==='hidden'?'Mở nền':'Đang xem'});}catch(e){}}
+const FAKE_SLOT_MAP={'CNTT.CB-A86':0,'CNTT.CB-A87':1,'CNTT.CB-A88':2,'CNTT.CB-A89':3,'CNTT.CB-A90':4};
+const FAKE_BXX_POOL=['B07','B12','B18','B23','B31','B35','B42','B09','B27','B44','B16','B38','B05','B29','B47','B11','B33','B21','B45','B08'];
+function getCommunityDisplayName(rawName){
+  if(!rawName)return'Người học';
+  const slotIdx=FAKE_SLOT_MAP[rawName];
+  if(slotIdx===undefined)return rawName;
+  const now=new Date();
+  const start=new Date(now.getFullYear(),0,0);
+  const dayOfYear=Math.floor((now-start)/864e5);
+  const offset=dayOfYear%(FAKE_BXX_POOL.length-4);
+  return 'CNTT_CB.'+FAKE_BXX_POOL[(offset+slotIdx)%FAKE_BXX_POOL.length];
+}
 function relativeActivityTime(value){const time=Date.parse(value||'');if(!Number.isFinite(time))return 'chưa ghi nhận';const elapsed=Math.max(0,Date.now()-time);if(elapsed<60*1000)return 'vừa xong';if(elapsed<60*60*1000)return `${Math.floor(elapsed/60000)} phút trước`;if(elapsed<24*60*60*1000)return `${Math.floor(elapsed/3600000)} giờ trước`;return `${Math.floor(elapsed/86400000)} ngày trước`;}
 function renderStudyCommunity(){
   const panel=document.getElementById('studyCommunity');if(!panel)return;
@@ -273,11 +285,11 @@ function renderStudyCommunity(){
   if(count)count.textContent=studyPresenceAvailable?`${online} đang online · ${studyPresenceRows.length} người`:'Đang kết nối…';
   const recent=studyPresenceRows.filter(row=>{const joined=Date.parse(row.first_seen_at||'');return Number.isFinite(joined)&&Date.now()-joined>=0&&Date.now()-joined<15*60*1000;}).sort((a,b)=>Date.parse(b.first_seen_at)-Date.parse(a.first_seen_at));
   const notice=document.getElementById('communityNotice');
-  if(notice)notice.innerHTML=recent.length?`✨ <strong>${esc(recent[0].public_name)}</strong> vừa tham gia ôn tập · ${relativeActivityTime(recent[0].first_seen_at)}`:studyPresenceAvailable?'Mọi người có thể thấy nhau đang online để học cùng.':'';
+  if(notice)notice.innerHTML=recent.length?`✨ <strong>${esc(getCommunityDisplayName(recent[0].public_name))}</strong> vừa tham gia ôn tập · ${relativeActivityTime(recent[0].first_seen_at)}`:studyPresenceAvailable?'Mọi người có thể thấy nhau đang online để học cùng.':'';
   const list=document.getElementById('communityList');if(!list)return;
   if(!studyPresenceAvailable){list.innerHTML='<div class="community-error">Chưa tải được trạng thái học cùng nhau. Hãy thử tải lại sau.</div>';return;}
   if(!studyPresenceRows.length){list.innerHTML='<div class="community-empty">Chưa có người học nào được ghi nhận.</div>';return;}
-  list.innerHTML=studyPresenceRows.map(row=>`<div class="community-person"><div class="community-person-main"><span class="community-person-name">${esc(row.public_name||'Người học')}</span>${row.is_current?'<span class="community-you">Bạn</span>':''}<small class="community-activity">${row.is_online?'Đang học':row.last_seen_at?`Hoạt động ${relativeActivityTime(row.last_seen_at)}`:'Chưa hoạt động'}</small></div><span class="community-person-state"><i class="community-dot ${row.is_online?'online':''}" aria-hidden="true"></i>${row.is_online?'Online':'Offline'}</span></div>`).join('');
+  list.innerHTML=studyPresenceRows.map(row=>`<div class="community-person"><div class="community-person-main"><span class="community-person-name">${esc(getCommunityDisplayName(row.public_name))||'Người học'}</span>${row.is_current?'<span class="community-you">Bạn</span>':''}<small class="community-activity">${row.is_online?'Đang học':row.last_seen_at?`Hoạt động ${relativeActivityTime(row.last_seen_at)}`:'Chưa hoạt động'}</small></div><span class="community-person-state"><i class="community-dot ${row.is_online?'online':''}" aria-hidden="true"></i>${row.is_online?'Online':'Offline'}</span></div>`).join('');
 }
 async function refreshStudyCommunity(){
   if(!syncCode){renderStudyCommunity();return;}
